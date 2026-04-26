@@ -1,0 +1,26 @@
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+.env
+.env.local
+.vscode/
+.idea/
+coverage/
+*.tsbuildinfo
+
+# Obsidian plugin build artifacts
+packages/obsidian-plugin/main.js
+packages/obsidian-plugin/styles.css
+
+# Python (research/)
+research/.venv/
+research/__pycache__/
+research/**/*.pyc
+research/.uv/
+research/.ruff_cache/
+
+# Local journal artifacts (test data)
+.mnemoscope/
+*.journal.jsonl

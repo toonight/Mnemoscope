@@ -1,0 +1,29 @@
+{
+  "name": "mnemoscope",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Observability and predictive memory tooling for LLM agents on Markdown vaults.",
+  "license": "Apache-2.0",
+  "author": "Mnemoscope contributors",
+  "homepage": "https://github.com/toonight/Mnemoscope",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/toonight/Mnemoscope.git"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.3"
+  }
+}

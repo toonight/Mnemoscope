@@ -1,0 +1,27 @@
+{
+  "name": "@mnemoscope/core",
+  "version": "0.0.1",
+  "description": "Core memory observability primitives for Mnemoscope: rot scoring, tiering, signed journal.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --experimental-test-coverage \"src/**/*.test.ts\""
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
