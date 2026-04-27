@@ -13,7 +13,10 @@
   <a href="https://github.com/toonight/Mnemoscope/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/toonight/Mnemoscope/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 
-<p><i>An open-source observability layer for LLM agent memory on Markdown vaults.<br/>Predict context rot before it happens. Audit every agent write with a signed journal. Tier your knowledge the way the science says you should.</i></p>
+<p><b>An open-source observability layer for LLM agent memory on Markdown vaults.</b><br/>
+<i>Predict context rot before it happens · audit every agent write with a signed journal · tier your knowledge the way the science says you should.</i></p>
+
+<sub><a href="#-see-it-in-action">Demo</a> · <a href="#-how-it-fits-your-workflow">Workflow</a> · <a href="#-the-four-mcp-tools">Tools</a> · <a href="#-quickstart">Quickstart</a> · <a href="#%EF%B8%8F-architecture">Architecture</a> · <a href="#-scientific-posture">Science</a></sub>
 
 </div>
 
@@ -24,7 +27,7 @@
 
 ## 👀 See it in action
 
-Real output, captured from the bundled [`examples/demo-vault`](./examples/demo-vault) — a 13-note synthetic vault designed so every rot factor moves. Reproduce it locally with `mnemoscope-init examples/demo-vault` (full transcript: [SAMPLE-OUTPUT.md](./examples/demo-vault/SAMPLE-OUTPUT.md)).
+Real output, captured from the bundled [`examples/demo-vault`](./examples/demo-vault) — a 13-note synthetic vault built so every rot factor moves. Reproduce locally with `mnemoscope-init examples/demo-vault` (full transcript: [SAMPLE-OUTPUT.md](./examples/demo-vault/SAMPLE-OUTPUT.md)).
 
 <table>
 <tr>
@@ -46,7 +49,7 @@ Real output, captured from the bundled [`examples/demo-vault`](./examples/demo-v
 </table>
 
 <details>
-<summary>Full overview (click to expand) — gauge, factors, top risk notes, both verify states, tier counts, hash chain, all on one page</summary>
+<summary>Full overview (click) — gauge, factors, top-risk notes, both verify states, tier counts, hash chain — all on one page</summary>
 
 <img src="./docs/screenshots/demo-overview.png" alt="Full demo page showing every Mnemoscope view at once." />
 
@@ -54,99 +57,68 @@ Real output, captured from the bundled [`examples/demo-vault`](./examples/demo-v
 
 ## ✨ What is Mnemoscope?
 
-Mnemoscope is **not** another memory store. It is an **instrument** to:
+Mnemoscope is **not** another memory store. It is an **instrument** that sits between your LLM agent and your Markdown vault and gives you three things nobody else gives you in one tool:
 
-- 🎯 **Predict** the rot risk of a corpus *before* it gets injected into the LLM, with a citation-backed score broken down across five factors.
-- 📝 **Witness** every read and write your agent performs on the vault, in an Ed25519-signed, hash-chained journal that detects field-level tampering, deletion, and reordering.
-- 🧱 **Tier** the corpus into a working / episodic / semantic hierarchy, drawing on the science instead of the GraphRAG hype.
+- 🎯 **Predict** the rot risk of a corpus *before* injection, with a citation-backed score across 5 factors.
+- 📝 **Witness** every read and write your agent performs, in an Ed25519-signed, hash-chained journal that detects field-level tampering, deletion, and reordering.
+- 🧱 **Tier** the corpus into a working / episodic / semantic hierarchy, drawing on the 2025–2026 science instead of the GraphRAG hype.
 
-It ships as an **MCP server** (consumable by Claude Code, Cursor, ChatGPT desktop, and any MCP-compatible client), an **Obsidian plugin**, and a **Claude Code `PostToolUse` hook** that auto-records every Write / Edit / MultiEdit. Everything runs **100 % locally**. No cloud. No telemetry without explicit opt-in.
+It ships as an **MCP server** (Claude Code, Cursor, ChatGPT desktop, anything MCP-compatible), an **Obsidian plugin**, and a **Claude Code `PostToolUse` hook**. Everything runs **100% locally**. No cloud. No telemetry without explicit opt-in.
 
-## 🔥 Why this exists
+## 🔄 How it fits your workflow
 
-There are already excellent agent-memory projects (Letta, Mem0, Zep, Cognee, Anthropic Memory tool, Smart Connections, MemPalace, Basic Memory). None of them, as of April 2026, does **all three** of the following:
+Imagine you start a brand-new project — a folder of Markdown notes you'll grow with Claude Code over the next year. Mnemoscope plugs into the lifecycle in five places:
 
-1. Predict context-rot risk *before* the LLM sees the corpus, on the basis of structural signatures (Chroma 2025 measures degradation reactively; nobody predicts it).
-2. Provide an **Ed25519-signed, hash-chained** local journal of agent operations on the vault, so deletion / reordering / tampering are all detectable from a single `mnemoscope-verify` invocation.
-3. Implement a hierarchical working/episodic/semantic split on plain Markdown — no graph database, no cloud, no proprietary serialization — as a public reference for the pattern that 2025–2026 research keeps converging on.
-
-That triple gap is the only thing this project is trying to fill.
-
-## ✅ What works today (v0.1.0)
-
-| | What | How verified |
-|---|---|---|
-| ✅ | `predict_rot` returns a 5-factor breakdown, each factor citation-backed in source | 12 unit tests; smoke test on a real 506K-token vault returned 41/100 dominated by `tokenVolume`, top-risk notes were the 5 largest notes — sensible |
-| ✅ | `get_tiered_read` splits a vault into working / episodic / semantic by freshness | integration test on fixture vault; freshness-based v0, access-frequency in v0.2 |
-| ✅ | `record_journal` produces a real **Ed25519** signature with **prevHash** chaining | 9 journal tests including 4 tamper tests + 2 chain-integrity tests (truncation, reordering both detectable) |
-| ✅ | `mnemoscope-verify` CLI replays the journal and exits non-zero on any invalid entry | wired to the same `verifyAll` |
-| ✅ | `mnemoscope-record-hook` is a Claude Code `PostToolUse` hook that auto-journals every Write / Edit / MultiEdit | [docs/claude-code-hook.md](./docs/claude-code-hook.md); never blocks the tool call |
-| ✅ | MCP server passes 5 end-to-end integration tests over real JSON-RPC stdio | `server.test.ts` spawns the binary and exchanges real messages |
-| ✅ | Obsidian plugin compiles to a single 15 KB bundle (sidebar view with SVG rot gauge, factor breakdown bars, top-risk list, settings tab) | esbuild config in `packages/obsidian-plugin` |
-| ✅ | Research sub-project: classifier (sklearn → ONNX, synthetic baseline), MarkdownMemBench v0.1 schema + sample dataset + harness, Chroma replication protocol | `research/` is a self-contained `uv` project |
-| ✅ | CI green on Node 22, **0 npm vulnerabilities**, `npm audit --audit-level=moderate` enforced on every push | GitHub Actions on every push |
-
-## 🚀 Quickstart
-
-```bash
-git clone https://github.com/toonight/Mnemoscope
-cd Mnemoscope
-npm install
-npm run build
-npm test                 # 28 tests, ~6s
-npm audit                # 0 vulnerabilities
+```
+   [create project]
+        │
+        ▼
+   mnemoscope-init                     ◄─── 1× at the very start
+        │                                   creates .mnemoscope/, generates Ed25519 keypair
+        ▼
+   ┌───────────────────────────────────────────────────────────┐
+   │  [you work with Claude Code on the vault]                 │
+   │                                                           │
+   │   predict_rot       ──┐                                   │
+   │                       ├─►  on demand (or before sessions) │
+   │   get_tiered_read   ──┘    "is the vault healthy?"        │
+   │                            "what should the agent read?"  │
+   │                                                           │
+   │   PostToolUse hook  ────►  passive, on every Write/Edit   │
+   │                            "what did the agent just do?"  │
+   └───────────────────────────────────────────────────────────┘
+        │
+        ▼
+   mnemoscope-verify                   ◄─── on demand, or in CI
+                                            "has anyone tampered?"
 ```
 
-### Initialise a vault
+| Phase | Tool / command | When to use it | What you get |
+|---|---|---|---|
+| 1. **Bootstrap** | `mnemoscope-init` | Once, at project creation | `.mnemoscope/` + per-vault Ed25519 keypair |
+| 2. **Predict** | `predict_rot` (MCP tool) | Before injecting a vault into the LLM | A 0–100 risk score + factor breakdown + top-risk notes |
+| 3. **Compact** | `get_tiered_read` (MCP tool) | When the vault grows past your model's effective context | Working / episodic / semantic split |
+| 4. **Witness** | `mnemoscope-record-hook` (Claude Code PostToolUse hook) | Wired once in `~/.claude/settings.json`, then **passive** | Every agent write becomes a signed journal entry |
+| 5. **Audit** | `mnemoscope-verify` | Any time, or as a pre-commit / CI step | Exit 0 if all entries verify, exit 1 if tampered |
 
-```bash
-npm link --workspace @mnemoscope/cli
-mnemoscope-init /path/to/vault
-# Initialized Mnemoscope in /path/to/vault.
-#   state dir:   /path/to/vault/.mnemoscope
-#   journal:     /path/to/vault/.mnemoscope/journal.jsonl
-#   public key:  /path/to/vault/.mnemoscope/keys/ed25519.pub
-#   fingerprint: 7a3c4d…
-```
-
-`mnemoscope-init` is idempotent — re-running on an already-initialised vault leaves the keypair and journal alone and exits 0.
-
-### Use Mnemoscope from Claude Code (or any MCP client)
-
-Add to your MCP client config:
-
-```json
-{
-  "mcpServers": {
-    "mnemoscope": {
-      "command": "node",
-      "args": ["/absolute/path/to/Mnemoscope/packages/mcp-server/dist/index.js"]
-    }
-  }
-}
-```
-
-### The four MCP tools
+## 🛠️ The four MCP tools
 
 | Tool | Input | What it returns |
 |---|---|---|
-| `predict_rot` | `vault_path` | Score 0-100, dominant factor, full factor breakdown, top 5 risk notes, vault stats |
+| `predict_rot` | `vault_path` | Score 0–100, dominant factor, full factor breakdown, top 5 risk notes, vault stats |
 | `get_tiered_read` | `vault_path`, optional age thresholds | Note paths grouped into `working` / `episodic` / `semantic` |
 | `record_journal` | `vault_path`, `session_id`, `op`, `target_path`, optional content | The signed entry, including its `sig`, `keyFingerprint`, and `prevHash` |
-| `read_journal` | `vault_path`, optional `session_id` | All journal entries (or a single session's entries) |
+| `read_journal` | `vault_path`, optional `session_id` | All journal entries, or a single session's entries |
 
-#### Example — `predict_rot` on the author's Brainstorm vault
+#### Example — `predict_rot` on a real vault
 
 ```json
 {
   "rot_risk": 41,
   "dominant_factor": "tokenVolume",
   "factors": {
-    "tokenVolume": 100,
-    "semanticRedundancy": 0,
-    "distractorDensity": 2.65,
-    "structuralCoherence": 100,
-    "freshnessSpread": 0
+    "tokenVolume": 100, "semanticRedundancy": 0,
+    "distractorDensity": 2.65, "structuralCoherence": 100, "freshnessSpread": 0
   },
   "top_risk_notes": [
     { "relPath": "brainstorms/.../transcript.md", "approxTokens": 13439, "reason": "very large note" },
@@ -158,9 +130,48 @@ Add to your MCP client config:
 }
 ```
 
-### Auto-journal every Claude Code Write / Edit / MultiEdit
+## 🚀 Quickstart
 
-Asking the agent to call `record_journal` on every write is a recipe for forgetting. Wire the bundled hook into Claude Code instead:
+```bash
+git clone https://github.com/toonight/Mnemoscope
+cd Mnemoscope
+npm install
+npm run build
+npm test                           # 28 tests, ~6 s
+npm audit                          # 0 vulnerabilities
+
+# Make the CLI binaries available on your PATH
+npm link --workspace @mnemoscope/cli
+```
+
+### Bootstrap a vault
+
+```bash
+mnemoscope-init /path/to/your/vault
+# → state dir, Ed25519 keypair, fingerprint
+```
+
+> Add `.mnemoscope/` to your vault's `.gitignore` — the per-vault private key must never be committed.
+
+### Connect the MCP server to Claude Code (or Cursor / any MCP client)
+
+```json
+// ~/.claude/settings.json
+{
+  "mcpServers": {
+    "mnemoscope": {
+      "command": "node",
+      "args": ["/absolute/path/to/Mnemoscope/packages/mcp-server/dist/index.js"]
+    }
+  }
+}
+```
+
+The four tools (`predict_rot`, `get_tiered_read`, `record_journal`, `read_journal`) become available to the agent immediately.
+
+### (Optional) wire the auto-journal hook
+
+Asking the agent to call `record_journal` on every write is a recipe for forgetting. Wire the bundled hook instead:
 
 ```json
 // ~/.claude/settings.json
@@ -176,7 +187,7 @@ Asking the agent to call `record_journal` on every write is a recipe for forgett
 }
 ```
 
-The hook resolves the vault root via `MNEMOSCOPE_VAULT_PATH` or by walking up to the closest `.mnemoscope/` directory. It **never** blocks the tool call: any internal error is caught, logged to stderr, and the process exits 0. Full setup including safety properties: [docs/claude-code-hook.md](./docs/claude-code-hook.md).
+The hook resolves the vault root via `MNEMOSCOPE_VAULT_PATH` or by walking up to the closest `.mnemoscope/` directory. It **never blocks** the tool call: any internal error is caught, logged to stderr, and the process exits 0. Full setup including safety properties: [docs/claude-code-hook.md](./docs/claude-code-hook.md).
 
 ### Verify the journal
 
@@ -187,11 +198,26 @@ mnemoscope-verify /path/to/vault
 # 2 entries; 2 valid; 0 invalid
 ```
 
-`mnemoscope-verify` exits non-zero if any entry has been:
+`mnemoscope-verify` exits non-zero on any of:
 
-- field-level tampered (signature mismatch),
-- deleted or reordered (`prevHash` chain break),
-- signed by a key the current vault does not own.
+- field-level tampering (signature mismatch),
+- deletion or reordering (`prevHash` chain break),
+- entries signed by a key the current vault does not own.
+
+## ✅ What works today (v0.1.0)
+
+| | What | How verified |
+|---|---|---|
+| ✅ | `predict_rot` returns a 5-factor breakdown, each factor citation-backed in source | 12 unit tests; smoke-tested on a real 506 K-token vault — sensible top-risk ordering |
+| ✅ | `get_tiered_read` splits a vault into working / episodic / semantic by freshness | integration test on fixture vault; freshness-based v0, access-frequency planned for v0.2 |
+| ✅ | `record_journal` produces a real **Ed25519** signature with **prevHash** chaining | 9 journal tests, including 4 tamper tests + 2 chain-integrity tests (truncation, reordering) |
+| ✅ | `mnemoscope-init` bootstraps a vault idempotently | manual run on multiple fresh + existing vaults |
+| ✅ | `mnemoscope-verify` CLI replays and exits non-zero on any invalid entry | wired to the same `verifyAll` |
+| ✅ | `mnemoscope-record-hook` Claude Code `PostToolUse` hook auto-journals every Write/Edit/MultiEdit | [docs/claude-code-hook.md](./docs/claude-code-hook.md), never blocks |
+| ✅ | MCP server passes 5 end-to-end tests over real JSON-RPC stdio | `server.test.ts` spawns the binary |
+| ✅ | Obsidian plugin: sidebar view with SVG rot gauge, factor bars, top-risk list, settings tab | 15 KB single-file bundle, no runtime deps |
+| ✅ | Research sub-project: classifier (sklearn → ONNX), MarkdownMemBench v0.1 schema + sample dataset + harness, Chroma replication protocol | self-contained `uv` Python project under [`research/`](./research) |
+| ✅ | CI green on Node 22, **0 npm vulnerabilities**, `npm audit --audit-level=moderate` enforced on every push | GitHub Actions on every push and PR |
 
 ## 🏗️ Architecture
 
@@ -200,7 +226,7 @@ flowchart LR
     A["Obsidian vault<br/>Markdown files"] --> B["mnemoscope/core<br/>signatures · rot · tiering · Ed25519 chained journal"]
     B --> C["mnemoscope/mcp-server<br/>stdio MCP - 4 tools"]
     B --> D["mnemoscope/obsidian-plugin<br/>UI · rot gauge"]
-    B --> G["mnemoscope/cli<br/>record-hook · verify"]
+    B --> G["mnemoscope/cli<br/>init · record-hook · verify"]
     C -->|tools| E(("Claude Code<br/>Cursor<br/>ChatGPT desktop"))
     G -->|PostToolUse hook| E
     F["research/<br/>classifier · benchmark · replication"] -.->|trained ONNX classifier| B
@@ -218,10 +244,12 @@ mnemoscope/
 ├── packages/
 │   ├── core/              # rot scoring, tiering, Ed25519 hash-chained journal, signatures
 │   ├── mcp-server/        # MCP server (stdio); 4 tools, integration-tested via spawn
-│   ├── obsidian-plugin/   # Obsidian plugin: rot-gauge command
-│   └── cli/               # mnemoscope-record-hook, mnemoscope-verify
+│   ├── obsidian-plugin/   # Obsidian plugin: rot gauge, factor bars, top-risk list, settings
+│   └── cli/               # mnemoscope-init, mnemoscope-record-hook, mnemoscope-verify
+├── examples/
+│   └── demo-vault/        # 13-note synthetic vault — every rot factor moves
 ├── research/              # Python (uv): classifier, MarkdownMemBench v0.1, Chroma replication
-└── docs/                  # banner, logo, claude-code-hook setup
+└── docs/                  # banner, logo, claude-code-hook setup, demo page, screenshots
 ```
 
 ## 🔐 The signed journal in one diagram
@@ -247,7 +275,7 @@ flowchart TD
 |---|---|
 | Edit a field of any single entry | per-entry signature mismatch |
 | Delete an entry | next entry's `prevHash` no longer matches |
-| Reorder two entries | both signatures still verify but `prevHash` chain breaks |
+| Reorder two entries | both signatures still verify, but the chain breaks |
 | Forge an entry with a different key | `keyFingerprint` flagged as foreign |
 
 ## 🤝 Voisins (not competitors)
@@ -277,7 +305,7 @@ Mnemoscope is meant to be a tool **and** a contribution to the public empirical 
 
 Each thread lives in [`research/`](./research) and will produce a preprint alongside the code.
 
-## 🛣️ Roadmap (next)
+## 🛣️ Roadmap
 
 - [ ] Dogfood the auto-journal hook on the author's vault for two full weeks; tune heuristics against observed Claude Code session outcomes
 - [ ] Submit the MCP server to [Smithery](https://smithery.ai), [PulseMCP](https://www.pulsemcp.com), [Glama](https://glama.ai) — registry metadata files (`smithery.yaml`, `glama.json`) already in this repo
@@ -288,13 +316,13 @@ Each thread lives in [`research/`](./research) and will produce a preprint along
 - [ ] Preprint #1: replication of Chroma *Context Rot* on real Obsidian vaults
 - [ ] Off-vault key escrow + periodic remote attestation (defense-in-depth for the journal)
 
-Full list & history: [CHANGELOG.md](./CHANGELOG.md).
+Full history: [CHANGELOG.md](./CHANGELOG.md).
 
 ## 🧑‍🤝‍🧑 Contributing
 
 PRs are welcome but the most useful first step is opening an issue describing what you want to do. See [CONTRIBUTING.md](./CONTRIBUTING.md) for code style and process.
 
-If you are a **researcher** at Letta, Chroma, Mem0, Cognee, OSU-NLP, Snap Research, or any related lab, and you see overlap with the *Predictive Context Rot* or *MarkdownMemBench* axes, please reach out — the project is explicitly designed for this.
+If you are a **researcher** at Letta, Chroma, Mem0, Cognee, OSU-NLP, Snap Research or any related lab and you see overlap with the *Predictive Context Rot* or *MarkdownMemBench* axes, please reach out — the project is explicitly designed for this.
 
 ## 📜 License
 
