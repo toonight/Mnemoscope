@@ -1,6 +1,6 @@
 {
   "name": "@mnemoscope/mcp-server",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "MCP server exposing Mnemoscope's predict_rot, get_tiered_read, and journal tools to any MCP-compatible client.",
   "license": "Apache-2.0",
   "type": "module",
@@ -22,7 +22,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@mnemoscope/core": "0.0.1",
+    "@mnemoscope/core": "0.1.0",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {

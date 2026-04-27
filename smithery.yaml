@@ -1,0 +1,62 @@
+# Smithery MCP registry metadata.
+# https://smithery.ai/docs
+
+name: mnemoscope
+displayName: Mnemoscope
+description: |
+  Predictive context-rot scoring, signed local write journal, and
+  hierarchical tiering for LLM agents on Markdown vaults. 100 % local.
+  Built on Chroma 2025 Context Rot, Letta 2025 filesystem result,
+  and the working / episodic / semantic split that 2025-2026 agent-memory
+  research keeps converging on.
+homepage: https://github.com/toonight/Mnemoscope
+repository: https://github.com/toonight/Mnemoscope
+license: Apache-2.0
+version: 0.1.0
+
+author:
+  name: Mnemoscope contributors
+  url: https://github.com/toonight/Mnemoscope
+
+tags:
+  - memory
+  - obsidian
+  - markdown
+  - claude-code
+  - audit
+  - forensics
+  - rot-detection
+  - tiered-memory
+
+mcpServer:
+  command: npx
+  args:
+    - -y
+    - "@mnemoscope/mcp-server"
+  protocols:
+    - stdio
+
+tools:
+  - name: predict_rot
+    summary: |
+      Returns a 0-100 rot risk score for a Markdown vault, broken down
+      across five citation-backed factors (token volume, semantic
+      redundancy, distractor density, structural coherence, freshness
+      spread). Use it BEFORE injecting a vault into the LLM.
+  - name: get_tiered_read
+    summary: |
+      Splits a vault into working / episodic / semantic layers so the
+      agent can read a compacted view instead of the full dump. Implements
+      the hierarchical-memory pattern from Letta and the 2025-2026 agent-memory
+      literature.
+  - name: record_journal
+    summary: |
+      Append a forensic entry to the local Ed25519-signed, hash-chained
+      journal of agent operations on the vault. Tampering with any field
+      and removal/reordering of entries are both detectable.
+  - name: read_journal
+    summary: |
+      Replay journal entries, optionally filtered by session_id.
+
+requirements:
+  node: ">=22"

@@ -1,6 +1,6 @@
 {
   "name": "@mnemoscope/obsidian-plugin",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Obsidian plugin exposing Mnemoscope's rot gauge and journal viewer.",
   "license": "Apache-2.0",
   "private": true,
@@ -14,7 +14,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@mnemoscope/core": "0.0.1"
+    "@mnemoscope/core": "0.1.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.0",

@@ -1,6 +1,6 @@
 {
   "name": "mnemoscope",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "description": "Observability and predictive memory tooling for LLM agents on Markdown vaults.",
   "license": "Apache-2.0",

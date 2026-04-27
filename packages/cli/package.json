@@ -1,6 +1,6 @@
 {
   "name": "@mnemoscope/cli",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Mnemoscope command-line entrypoints, including the Claude Code PostToolUse hook that auto-journals Write/Edit/MultiEdit operations.",
   "license": "Apache-2.0",
   "type": "module",
@@ -21,6 +21,6 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@mnemoscope/core": "0.0.1"
+    "@mnemoscope/core": "0.1.0"
   }
 }

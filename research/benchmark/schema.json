@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/toonight/Mnemoscope/research/benchmark/schema.json",
+  "title": "MarkdownMemBench task",
+  "type": "object",
+  "required": ["id", "vault_id", "type", "question", "expected_answer", "evidence_paths"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^mmb-[a-z0-9-]+$" },
+    "vault_id": { "type": "string" },
+    "type": {
+      "type": "string",
+      "enum": ["recall", "multi_hop", "cross_doc_negation", "aggregation", "write_task"]
+    },
+    "question": { "type": "string", "minLength": 1 },
+    "expected_answer": { "type": "string" },
+    "evidence_paths": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+    "languages": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z]{2}$" }
+    },
+    "verifier": {
+      "description": "Optional deterministic verifier function name (used for write_task and aggregation when an exact-match comparison is insufficient).",
+      "type": "string"
+    },
+    "notes": { "type": "string" }
+  }
+}

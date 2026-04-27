@@ -1,0 +1,9 @@
+{
+  "name": "mmb-sample",
+  "version": "0.1.0",
+  "license": "CC-BY-4.0",
+  "languages": ["en"],
+  "vault_count": 1,
+  "task_count": 5,
+  "notes": "Hand-crafted demonstration dataset for MarkdownMemBench v0.1. Tiny fictional-novel outline; not a benchmark of model quality — exists so contributors can run the harness end-to-end without external data."
+}

@@ -7,12 +7,13 @@
   <a href="https://nodejs.org"><img alt="Node 22+" src="https://img.shields.io/badge/node-%E2%89%A522-339933?style=flat-square&logo=node.js&logoColor=white"></a>
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-server%20+%20Obsidian-5fd9d1?style=flat-square"></a>
   <img alt="100% local" src="https://img.shields.io/badge/runs-100%25%20local-a78bfa?style=flat-square">
-  <img alt="Tests: 24 passing" src="https://img.shields.io/badge/tests-24%20passing-2ea043?style=flat-square">
+  <img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-fbbf24?style=flat-square">
+  <img alt="Tests: 28 passing" src="https://img.shields.io/badge/tests-28%20passing-2ea043?style=flat-square">
   <img alt="0 vulnerabilities" src="https://img.shields.io/badge/vulnerabilities-0-2ea043?style=flat-square">
   <a href="https://github.com/toonight/Mnemoscope/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/toonight/Mnemoscope/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 
-<p><i>An open-source observability layer for LLM agent memory on Markdown vaults.<br/>Predict context rot before it happens. Audit what your agent reads and writes. Tier your knowledge the way the science says you should.</i></p>
+<p><i>An open-source observability layer for LLM agent memory on Markdown vaults.<br/>Predict context rot before it happens. Audit every agent write with a signed journal. Tier your knowledge the way the science says you should.</i></p>
 
 </div>
 
@@ -21,26 +22,39 @@
 > [!NOTE]
 > The dominant 2025–2026 narrative on X — *"Markdown trips up the LLM at scale"* — is partially wrong. **Markdown** does not trip up the LLM. **Long-context loading** trips up the LLM ([Chroma, *Context Rot*, July 2025](https://www.trychroma.com/research/context-rot)). Mnemoscope is built on that distinction.
 
-## ✨ Why Mnemoscope?
+## ✨ What is Mnemoscope?
 
 Mnemoscope is **not** another memory store. It is an **instrument** to:
 
-- 🎯 **Predict** the rot risk of a corpus *before* it gets injected into the LLM.
-- 📝 **Witness** what the agent reads and writes during a session, with a locally signed audit trail.
+- 🎯 **Predict** the rot risk of a corpus *before* it gets injected into the LLM, with a citation-backed score broken down across five factors.
+- 📝 **Witness** every read and write your agent performs on the vault, in an Ed25519-signed, hash-chained journal that detects field-level tampering, deletion, and reordering.
 - 🧱 **Tier** the corpus into a working / episodic / semantic hierarchy, drawing on the science instead of the GraphRAG hype.
 
-It ships as an **MCP server** (consumable by Claude Code, Cursor, ChatGPT desktop, and any MCP-compatible client) plus an **Obsidian plugin** for the visual side. Everything runs **100% locally**. No cloud. No telemetry without explicit opt-in.
+It ships as an **MCP server** (consumable by Claude Code, Cursor, ChatGPT desktop, and any MCP-compatible client), an **Obsidian plugin**, and a **Claude Code `PostToolUse` hook** that auto-records every Write / Edit / MultiEdit. Everything runs **100 % locally**. No cloud. No telemetry without explicit opt-in.
 
-## 🧭 The three contribution axes at a glance
+## 🔥 Why this exists
 
-| | Axis | What it does | Status |
-|:-:|---|---|:-:|
-| 🎯 | **Predictive context-rot scoring** | Computes a `rot_risk` score (0–100) from structural signatures *before* injection, broken down across 5 documented factors (token volume, semantic redundancy, distractor density, structural coherence, freshness spread), each citation-backed. | 🟢 v0 heuristic shipping; calibrated classifier next |
-| 📝 | **Signed local journal** | Append-only JSONL log of every agent read/write/create/delete on the vault. Each entry is signed with a per-vault **Ed25519** keypair; `mnemoscope-verify` flags any tampered or foreign-signed entry. | 🟢 working signing & tamper detection |
-| 🧱 | **Hierarchical memory tiering** | Reference implementation of the working/episodic/semantic split that 2025–2026 agent-memory research keeps converging on, on plain Markdown. v0 split is freshness-based; access frequency and pinning will follow. | 🟢 v0 shipping |
+There are already excellent agent-memory projects (Letta, Mem0, Zep, Cognee, Anthropic Memory tool, Smart Connections, MemPalace, Basic Memory). None of them, as of April 2026, does **all three** of the following:
 
-> [!TIP]
-> Each axis has a separate research thread in [`research/`](./research) — open-source classifier training, MarkdownMemBench dataset construction, and a Chroma replication. Researchers are explicitly invited.
+1. Predict context-rot risk *before* the LLM sees the corpus, on the basis of structural signatures (Chroma 2025 measures degradation reactively; nobody predicts it).
+2. Provide an **Ed25519-signed, hash-chained** local journal of agent operations on the vault, so deletion / reordering / tampering are all detectable from a single `mnemoscope-verify` invocation.
+3. Implement a hierarchical working/episodic/semantic split on plain Markdown — no graph database, no cloud, no proprietary serialization — as a public reference for the pattern that 2025–2026 research keeps converging on.
+
+That triple gap is the only thing this project is trying to fill.
+
+## ✅ What works today (v0.1.0)
+
+| | What | How verified |
+|---|---|---|
+| ✅ | `predict_rot` returns a 5-factor breakdown, each factor citation-backed in source | 12 unit tests; smoke test on a real 506K-token vault returned 41/100 dominated by `tokenVolume`, top-risk notes were the 5 largest notes — sensible |
+| ✅ | `get_tiered_read` splits a vault into working / episodic / semantic by freshness | integration test on fixture vault; freshness-based v0, access-frequency in v0.2 |
+| ✅ | `record_journal` produces a real **Ed25519** signature with **prevHash** chaining | 9 journal tests including 4 tamper tests + 2 chain-integrity tests (truncation, reordering both detectable) |
+| ✅ | `mnemoscope-verify` CLI replays the journal and exits non-zero on any invalid entry | wired to the same `verifyAll` |
+| ✅ | `mnemoscope-record-hook` is a Claude Code `PostToolUse` hook that auto-journals every Write / Edit / MultiEdit | [docs/claude-code-hook.md](./docs/claude-code-hook.md); never blocks the tool call |
+| ✅ | MCP server passes 5 end-to-end integration tests over real JSON-RPC stdio | `server.test.ts` spawns the binary and exchanges real messages |
+| ✅ | Obsidian plugin compiles to a single 8 KB bundle | esbuild config in `packages/obsidian-plugin` |
+| ✅ | Research sub-project: classifier (sklearn → ONNX, synthetic baseline), MarkdownMemBench v0.1 schema + sample dataset + harness, Chroma replication protocol | `research/` is a self-contained `uv` project |
+| ✅ | CI green on Node 22, **0 npm vulnerabilities**, `npm audit --audit-level=moderate` enforced on every push | GitHub Actions on every push |
 
 ## 🚀 Quickstart
 
@@ -49,12 +63,13 @@ git clone https://github.com/toonight/Mnemoscope
 cd Mnemoscope
 npm install
 npm run build
-npm test          # 24 tests, ~6s
+npm test                 # 28 tests, ~6s
+npm audit                # 0 vulnerabilities
 ```
 
-### Use it from Claude Code (or any MCP client)
+### Use Mnemoscope from Claude Code (or any MCP client)
 
-Add Mnemoscope to your MCP client config:
+Add to your MCP client config:
 
 ```json
 {
@@ -67,18 +82,41 @@ Add Mnemoscope to your MCP client config:
 }
 ```
 
-Then call any of the four tools:
+### The four MCP tools
 
-| Tool | What it does |
-|---|---|
-| `predict_rot` | Returns the rot risk score (0–100), factor breakdown, and 5 highest-risk notes for a vault. |
-| `get_tiered_read` | Splits a vault into `working` / `episodic` / `semantic` layers, so the agent can read a compacted view instead of the full dump. |
-| `record_journal` | Appends a forensic entry (read/write/create/delete + content hash + Ed25519 signature) to the local journal. |
-| `read_journal` | Replays journal entries, optionally filtered by `session_id`. |
+| Tool | Input | What it returns |
+|---|---|---|
+| `predict_rot` | `vault_path` | Score 0-100, dominant factor, full factor breakdown, top 5 risk notes, vault stats |
+| `get_tiered_read` | `vault_path`, optional age thresholds | Note paths grouped into `working` / `episodic` / `semantic` |
+| `record_journal` | `vault_path`, `session_id`, `op`, `target_path`, optional content | The signed entry, including its `sig`, `keyFingerprint`, and `prevHash` |
+| `read_journal` | `vault_path`, optional `session_id` | All journal entries (or a single session's entries) |
 
-### Auto-journal every Claude Code Write/Edit/MultiEdit
+#### Example — `predict_rot` on the author's Brainstorm vault
 
-Instead of asking the agent to call `record_journal` on every write — which it will forget — wire the bundled hook into Claude Code:
+```json
+{
+  "rot_risk": 41,
+  "dominant_factor": "tokenVolume",
+  "factors": {
+    "tokenVolume": 100,
+    "semanticRedundancy": 0,
+    "distractorDensity": 2.65,
+    "structuralCoherence": 100,
+    "freshnessSpread": 0
+  },
+  "top_risk_notes": [
+    { "relPath": "brainstorms/.../transcript.md", "approxTokens": 13439, "reason": "very large note" },
+    { "relPath": "brainstorms/.../sylvie-signaux.md", "approxTokens": 12605, "reason": "very large note" }
+  ],
+  "vault_stats": { "noteCount": 113, "approxTokens": 506823 },
+  "baseline_model": "v0-heuristic",
+  "version": "0.1.0"
+}
+```
+
+### Auto-journal every Claude Code Write / Edit / MultiEdit
+
+Asking the agent to call `record_journal` on every write is a recipe for forgetting. Wire the bundled hook into Claude Code instead:
 
 ```json
 // ~/.claude/settings.json
@@ -94,9 +132,9 @@ Instead of asking the agent to call `record_journal` on every write — which it
 }
 ```
 
-Full setup: [docs/claude-code-hook.md](./docs/claude-code-hook.md). The hook never blocks the tool call: any internal error is logged to stderr and the process exits 0.
+The hook resolves the vault root via `MNEMOSCOPE_VAULT_PATH` or by walking up to the closest `.mnemoscope/` directory. It **never** blocks the tool call: any internal error is caught, logged to stderr, and the process exits 0. Full setup including safety properties: [docs/claude-code-hook.md](./docs/claude-code-hook.md).
 
-### Verify the journal at any time
+### Verify the journal
 
 ```bash
 mnemoscope-verify /path/to/vault
@@ -105,17 +143,23 @@ mnemoscope-verify /path/to/vault
 # 2 entries; 2 valid; 0 invalid
 ```
 
+`mnemoscope-verify` exits non-zero if any entry has been:
+
+- field-level tampered (signature mismatch),
+- deleted or reordered (`prevHash` chain break),
+- signed by a key the current vault does not own.
+
 ## 🏗️ Architecture
 
 ```mermaid
 flowchart LR
-    A["Obsidian vault<br/>Markdown files"] --> B["mnemoscope/core<br/>signatures - rot - tiering - Ed25519 journal"]
+    A["Obsidian vault<br/>Markdown files"] --> B["mnemoscope/core<br/>signatures · rot · tiering · Ed25519 chained journal"]
     B --> C["mnemoscope/mcp-server<br/>stdio MCP - 4 tools"]
-    B --> D["mnemoscope/obsidian-plugin<br/>UI - rot gauge - journal viewer"]
-    B --> G["mnemoscope/cli<br/>record-hook - verify"]
+    B --> D["mnemoscope/obsidian-plugin<br/>UI · rot gauge"]
+    B --> G["mnemoscope/cli<br/>record-hook · verify"]
     C -->|tools| E(("Claude Code<br/>Cursor<br/>ChatGPT desktop"))
     G -->|PostToolUse hook| E
-    F["research/<br/>Python - uv - ONNX"] -.->|trained classifier| B
+    F["research/<br/>classifier · benchmark · replication"] -.->|trained ONNX classifier| B
     style A fill:#1a2444,stroke:#a78bfa,color:#cbd5e1
     style B fill:#0e1530,stroke:#5fd9d1,color:#cbd5e1
     style C fill:#0e1530,stroke:#5fd9d1,color:#cbd5e1
@@ -128,25 +172,50 @@ flowchart LR
 ```
 mnemoscope/
 ├── packages/
-│   ├── core/              # rot scoring, tiering, Ed25519-signed journal, signatures
+│   ├── core/              # rot scoring, tiering, Ed25519 hash-chained journal, signatures
 │   ├── mcp-server/        # MCP server (stdio); 4 tools, integration-tested via spawn
-│   ├── obsidian-plugin/   # Obsidian plugin: rot gauge command
+│   ├── obsidian-plugin/   # Obsidian plugin: rot-gauge command
 │   └── cli/               # mnemoscope-record-hook, mnemoscope-verify
-├── research/              # Python: predictive classifier, MarkdownMemBench, Chroma replication (planned)
+├── research/              # Python (uv): classifier, MarkdownMemBench v0.1, Chroma replication
 └── docs/                  # banner, logo, claude-code-hook setup
 ```
 
-## 🤝 Voisins (not competitors)
+## 🔐 The signed journal in one diagram
 
-Mnemoscope is a citizen of an existing ecosystem, not a replacement for any of it.
+```mermaid
+flowchart TD
+    K[Per-vault Ed25519 keypair<br/>at .mnemoscope/keys/ed25519.key, mode 0600]
+    E1[Entry #1<br/>prevHash=GENESIS<br/>sig=σ1]
+    E2[Entry #2<br/>prevHash=SHA256(σ1)<br/>sig=σ2]
+    E3[Entry #3<br/>prevHash=SHA256(σ2)<br/>sig=σ3]
+    K --> E1
+    K --> E2
+    K --> E3
+    E1 -. chain .-> E2 -. chain .-> E3
+    style K fill:#1a2444,stroke:#a78bfa,color:#cbd5e1
+    style E1 fill:#0e1530,stroke:#5fd9d1,color:#cbd5e1
+    style E2 fill:#0e1530,stroke:#5fd9d1,color:#cbd5e1
+    style E3 fill:#0e1530,stroke:#5fd9d1,color:#cbd5e1
+```
+
+| Attack | Detected by |
+|---|---|
+| Edit a field of any single entry | per-entry signature mismatch |
+| Delete an entry | next entry's `prevHash` no longer matches |
+| Reorder two entries | both signatures still verify but `prevHash` chain breaks |
+| Forge an entry with a different key | `keyFingerprint` flagged as foreign |
+
+Threat model in full: [SECURITY.md](./SECURITY.md).
+
+## 🤝 Voisins (not competitors)
 
 | Project | What it does | Where Mnemoscope sits |
 |---|---|---|
-| [Anthropic Memory tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool) | Official, file-based, primitive | Adds rot-scoring + journal Anthropic doesn't provide |
+| [Anthropic Memory tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool) | Official, file-based, primitive | We add the rot scoring + signed chained journal Anthropic does not provide |
 | [Letta](https://letta.com) / [MemGPT](https://github.com/letta-ai/letta) | Runtime-stateful agents | Different layer — we sit *under* the agent |
 | [Mem0](https://mem0.ai), [Zep](https://getzep.com), [Cognee](https://cognee.ai) | Generic memory stores | Different scope — we are MD-vault-native |
 | [MemPalace](https://mempalace.tech) | Viral OSS memory MCP | Not Obsidian-specific; complementary |
-| [Smart Connections](https://smartconnections.app) | RAG-vector for Obsidian | Co-installable; we are runtime/forensics, they are search |
+| [Smart Connections](https://smartconnections.app) | RAG-vector for Obsidian | Co-installable; we are runtime / forensics, they are search |
 | [Basic Memory MCP](https://github.com/basicmachines-co/basic-memory) | Semantic graph over markdown | Closest in spirit — we want to interop, not duplicate |
 | [claude-memory-compiler](https://github.com/coleam00/claude-memory-compiler) | MD-compiler approach | Reach out before duplicating |
 
@@ -157,47 +226,35 @@ Mnemoscope is a citizen of an existing ecosystem, not a replacement for any of i
 
 Mnemoscope is meant to be a tool **and** a contribution to the public empirical record on agent memory.
 
-| Research thread | Why it matters |
-|---|---|
-| **MarkdownMemBench** *(planned)* | Today's benchmarks ([LongMemEval](https://arxiv.org/pdf/2410.10813), [LoCoMo](https://snap-research.github.io/locomo/)) are conversational and English-only. There is no public bench for vault-native, MD-native agent memory. |
-| **Predictive Context Rot classifier** *(planned)* | Every existing benchmark measures degradation *after* injection. We aim to predict it *before*, calibrated against LongMemEval/LoCoMo with R² ≥ 0.6. |
-| **Replication of Chroma's *"structured > shuffled is worse"*** *(planned)* | Chroma showed coherent haystacks underperform shuffled ones on NIAH. Nobody has replicated or refuted this on real Obsidian vaults yet. |
-
-Each thread will live in [`research/`](./research) and produce a preprint alongside the code.
-
-## ✅ What works today (v0.0.1)
-
-| | What | How verified |
+| Research thread | Status | Why it matters |
 |---|---|---|
-| ✅ | Monorepo scaffold, Apache-2.0, npm workspaces, Node 22+, zero runtime deps in `core` | `npm run build` green |
-| ✅ | `predict_rot` returns a 5-factor breakdown, citation-backed in source | 12 unit tests in `rot-score.test.ts` |
-| ✅ | Smoke-tested on a real 506K-token Obsidian vault (rot risk 41/100, top-risk notes are the largest ones — sensible) | manual run, transcript in commit history |
-| ✅ | `get_tiered_read` splits a vault into working/episodic/semantic by freshness | integration test on fixture vault |
-| ✅ | `record_journal` produces a real **Ed25519** signature; `verifyAll` detects any field tampering and any foreign-key entry | 5 unit tests including 4 tamper-detection tests |
-| ✅ | MCP server passes 5 end-to-end integration tests over real JSON-RPC stdio | `node --test packages/mcp-server/dist/**/*.test.js` |
-| ✅ | `mnemoscope-record-hook` is a Claude Code `PostToolUse` hook that auto-journals every Write/Edit/MultiEdit | `docs/claude-code-hook.md` |
-| ✅ | `mnemoscope-verify` CLI replays the journal and exits non-zero on any invalid entry | wired to the same `verifyAll` |
-| ✅ | Obsidian plugin compiles to a single 8 KB bundle | esbuild config in `packages/obsidian-plugin` |
-| ✅ | CI green on Node 22, **0 npm vulnerabilities** | GitHub Actions on every push |
+| **MarkdownMemBench v0.1** | 🟢 schema + sample dataset + harness shipping | Today's benchmarks ([LongMemEval](https://arxiv.org/pdf/2410.10813), [LoCoMo](https://snap-research.github.io/locomo/)) are conversational and English-only. There is no public bench for vault-native, MD-native agent memory. |
+| **Predictive Context Rot classifier** | 🟡 sklearn → ONNX pipeline working on synthetic baseline | Every existing benchmark measures degradation *after* injection. We aim to predict it *before*, calibrated against LongMemEval / LoCoMo / MarkdownMemBench with R² ≥ 0.6. |
+| **Replication of Chroma's *"structured > shuffled is worse"*** | 🟡 protocol scaffolded, runner pending | Chroma showed coherent haystacks underperform shuffled ones on NIAH. Nobody has replicated or refuted this on real Obsidian vaults yet. |
+
+Each thread lives in [`research/`](./research) and will produce a preprint alongside the code.
 
 ## 🛣️ Roadmap (next)
 
-> [!NOTE]
-> The list below is what *isn't* done yet. Each item is sized so a single contributor can claim it. Open an issue before starting.
-
-- [ ] Dogfood the auto-journal hook on the author's vault for two full weeks; tune the rot heuristic against observed Claude Code session outcomes
-- [ ] Submit the MCP server to Smithery / PulseMCP / Glama registries
-- [ ] Submit the Obsidian plugin to the community plugins registry
-- [ ] Chained signatures: each entry signs the hash of the previous one, so journal truncation becomes detectable
-- [ ] Replace the v0 heuristic rot score with a calibrated ONNX classifier trained on LongMemEval / LoCoMo / MarkdownMemBench
-- [ ] Release **MarkdownMemBench v0.1** — the first MD-native, vault-native bench for agent memory
+- [ ] Dogfood the auto-journal hook on the author's vault for two full weeks; tune heuristics against observed Claude Code session outcomes
+- [ ] Submit the MCP server to [Smithery](https://smithery.ai), [PulseMCP](https://www.pulsemcp.com), [Glama](https://glama.ai) — registry metadata files (`smithery.yaml`, `glama.json`) already in this repo
+- [ ] Submit the Obsidian plugin to community plugins
+- [ ] Replace the v0 heuristic rot score with the calibrated ONNX classifier (load via `onnxruntime-node` from `core` as an optional dependency)
+- [ ] Release **MarkdownMemBench v1** with 50–200 contributed real vaults
 - [ ] Preprint #1: replication of Chroma *Context Rot* on real Obsidian vaults
+- [ ] Off-vault key escrow + periodic remote attestation (defense-in-depth for the journal)
+
+Full list & history: [CHANGELOG.md](./CHANGELOG.md).
 
 ## 🧑‍🤝‍🧑 Contributing
 
-PRs are welcome but the most useful first step is opening an issue describing what you want to do. See [CONTRIBUTING.md](./CONTRIBUTING.md).
+PRs are welcome but the most useful first step is opening an issue describing what you want to do. See [CONTRIBUTING.md](./CONTRIBUTING.md) for code style and process.
 
 If you are a **researcher** at Letta, Chroma, Mem0, Cognee, OSU-NLP, Snap Research, or any related lab, and you see overlap with the *Predictive Context Rot* or *MarkdownMemBench* axes, please reach out — the project is explicitly designed for this.
+
+## 🛡️ Security
+
+See [SECURITY.md](./SECURITY.md) for the threat model and the disclosure process. Critical issues (signing-key disclosure, signature forgery) are acknowledged within 24 hours.
 
 ## 📜 License
 
@@ -214,6 +271,7 @@ Mnemoscope's framing borrows directly from public work by:
 - [HippoRAG (NeurIPS'24, OSU-NLP)](https://github.com/osu-nlp-group/hipporag)
 - [LongMemEval (ICLR 2025)](https://arxiv.org/pdf/2410.10813)
 - [LoCoMo (Snap Research)](https://snap-research.github.io/locomo/)
+- [Liu et al., *Lost in the Middle* (2023)](https://arxiv.org/abs/2307.03172)
 - [Andrej Karpathy's LLM Wiki proposal (April 2026)](https://gist.github.com/rohitg00/2067ab416f7bbe447c1977edaaa681e2)
 
 Without their public artifacts, this project would not be possible.

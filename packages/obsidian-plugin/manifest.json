@@ -1,7 +1,7 @@
 {
   "id": "mnemoscope",
   "name": "Mnemoscope",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "minAppVersion": "1.5.0",
   "description": "See how your agent remembers (and forgets). Rot gauge and signed journal for Claude Code, Cursor, and other LLM agents using your vault.",
   "author": "Mnemoscope contributors",

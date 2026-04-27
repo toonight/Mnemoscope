@@ -13,13 +13,21 @@ import { dirname, join } from "node:path";
 export type JournalOp = "read" | "write" | "create" | "delete";
 
 /**
- * One append-only journal entry. The `sig` field is an Ed25519 signature
- * over the canonical JSON of the entry with the `sig` and `keyFingerprint`
- * fields omitted. Tampering with any field invalidates the signature.
+ * One append-only journal entry.
  *
- * `keyFingerprint` is the SHA-256 fingerprint of the SPKI-encoded public key,
- * truncated to 16 hex chars. It lets a verifier identify which key signed an
- * entry without loading the full public-key material.
+ * `sig` is an Ed25519 signature over the canonical JSON of the unsigned
+ * payload (every field except `sig` and `keyFingerprint`). Tampering with
+ * any field invalidates the signature.
+ *
+ * `prevHash` is the SHA-256 hash of the previous entry's `sig`, truncated
+ * to 32 hex chars. The first entry uses the literal "GENESIS". Together,
+ * `sig` + `prevHash` form a hash chain: any deletion or reordering of
+ * entries breaks the chain on the entry that follows the gap, even though
+ * each individual entry's signature still verifies.
+ *
+ * `keyFingerprint` is the SHA-256 fingerprint of the SPKI-encoded public
+ * key, truncated to 16 hex chars. It lets a verifier identify which key
+ * signed an entry without loading the full public-key material.
  */
 export type JournalEntry = {
   ts: string;
@@ -30,9 +38,12 @@ export type JournalEntry = {
   bytesAfter?: number;
   contentHashAfter?: string;
   diffHash?: string;
+  prevHash: string;
   keyFingerprint: string;
   sig: string;
 };
+
+export const GENESIS_PREV_HASH = "GENESIS";
 
 export type VerifiedJournalEntry =
   | { entry: JournalEntry; valid: true }
@@ -66,14 +77,20 @@ export class Journal {
 
   /**
    * Open (or create) the journal at `path`. If a per-vault Ed25519 keypair
-   * does not exist next to the journal, one is generated.
+   * does not exist next to the journal, one is generated. The last entry's
+   * signature is loaded so that the next `record()` can correctly chain
+   * onto it.
    */
   static async open(path: string, sessionId: string): Promise<Journal> {
     await mkdir(dirname(path), { recursive: true });
     const keyDir = join(dirname(path), "keys");
     const { privateKey, publicKey, fingerprint } = await loadOrCreateKeyPair(keyDir);
-    return new Journal(path, sessionId, privateKey, publicKey, fingerprint);
+    const journal = new Journal(path, sessionId, privateKey, publicKey, fingerprint);
+    journal.lastSig = await journal.tailSig();
+    return journal;
   }
+
+  private lastSig: string | null = null;
 
   publicKeyFingerprint(): string {
     return this.keyFingerprint;
@@ -100,11 +117,19 @@ export class Journal {
       ...(contentBefore !== undefined && contentAfter !== undefined
         ? { diffHash: hashHex(`${hashHex(contentBefore)}::${hashHex(contentAfter)}`) }
         : {}),
+      prevHash: this.lastSig === null ? GENESIS_PREV_HASH : hashHex(this.lastSig),
     };
     const sig = signCanonical(unsigned, this.privateKey);
     const entry: JournalEntry = { ...unsigned, keyFingerprint: this.keyFingerprint, sig };
     await appendFile(this.path, `${JSON.stringify(entry)}\n`, "utf8");
+    this.lastSig = sig;
     return entry;
+  }
+
+  private async tailSig(): Promise<string | null> {
+    const entries = await this.readAll();
+    if (entries.length === 0) return null;
+    return entries[entries.length - 1]!.sig;
   }
 
   /**
@@ -125,23 +150,43 @@ export class Journal {
   }
 
   /**
-   * Read all entries and verify each signature. Entries signed by a key
-   * other than the current journal's key fail verification (the public key
-   * needed to verify them is unavailable).
+   * Read all entries and verify, in order:
+   *   1. each entry's Ed25519 signature against the current vault's key,
+   *   2. the hash chain — entry N's `prevHash` must equal SHA-256(entry
+   *      N-1's `sig`); the first entry must use the GENESIS sentinel.
+   *
+   * A break in the hash chain means an entry was deleted or reordered;
+   * the per-entry signature alone does not catch that.
    */
   async verifyAll(): Promise<VerifiedJournalEntry[]> {
     const entries = await this.readAll();
-    return entries.map((entry) => {
+    const out: VerifiedJournalEntry[] = [];
+    let prevSig: string | null = null;
+    for (const entry of entries) {
       if (entry.keyFingerprint !== this.keyFingerprint) {
-        return {
+        out.push({
           entry,
           valid: false,
           reason: `signed by unknown key ${entry.keyFingerprint}; current key is ${this.keyFingerprint}`,
-        };
+        });
+        prevSig = entry.sig;
+        continue;
+      }
+      const expectedPrev = prevSig === null ? GENESIS_PREV_HASH : hashHex(prevSig);
+      if (entry.prevHash !== expectedPrev) {
+        out.push({
+          entry,
+          valid: false,
+          reason: `chain break: prevHash=${entry.prevHash} but expected ${expectedPrev}`,
+        });
+        prevSig = entry.sig;
+        continue;
       }
       const ok = verifyCanonical(entry, this.publicKey);
-      return ok ? { entry, valid: true } : { entry, valid: false, reason: "signature mismatch" };
-    });
+      out.push(ok ? { entry, valid: true } : { entry, valid: false, reason: "signature mismatch" });
+      prevSig = entry.sig;
+    }
+    return out;
   }
 }
 

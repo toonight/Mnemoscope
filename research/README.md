@@ -1,30 +1,33 @@
 # research/
 
-Python sub-project for the scientific contributions:
+Three Python sub-projects, all managed by [uv](https://docs.astral.sh/uv/) and tied together by [`pyproject.toml`](./pyproject.toml).
 
-1. **classifier/** — train the predictive context-rot classifier on LongMemEval / LoCoMo / MarkdownMemBench, export to ONNX, ship as part of `@mnemoscope/core`.
-2. **benchmark/** — assemble and release **MarkdownMemBench**, an opt-in dataset of anonymized Obsidian vaults with recall, multi-hop, and write-task questions. First MD-native, vault-native bench for agent memory.
-3. **replication/** — replicate or refute Chroma's *"structured haystacks underperform shuffled haystacks"* result (Context Rot, July 2025) on real vaults.
+| Folder | What it does |
+|---|---|
+| [`benchmark/`](./benchmark) | **MarkdownMemBench v0.1** — schema, sample dataset, reference harness with two SUTs (`naive` and `mnemoscope`). |
+| [`classifier/`](./classifier) | Trains the predictive context-rot classifier and exports it to ONNX. v0.1 ships with a synthetic dataset so the pipeline is mechanically verified end-to-end. |
+| [`replication/`](./replication) | Replicates Chroma's *Context Rot* "structured > shuffled is worse" finding on real Markdown vaults. Protocol-scaffolded, runner not yet implemented. |
 
-This sub-project is **not** required for end users — trained models are shipped as ONNX files inside `@mnemoscope/core` and loaded by `onnxruntime-node`. The Python tooling here is only for researchers training/benchmarking new versions.
-
-## Layout (planned)
-
-```
-research/
-├── classifier/          # rot-risk classifier training pipeline
-├── benchmark/           # MarkdownMemBench dataset + harness
-├── replication/         # Chroma "structured > shuffled" replication
-├── pyproject.toml       # uv-managed
-└── README.md
-```
-
-## Setup (planned)
+## Quick start
 
 ```bash
 cd research
 uv sync
-uv run python classifier/train.py
+
+# 1. train the classifier on synthetic data
+uv run python -m classifier.train --data classifier/synthetic.csv --out classifier/model.onnx
+
+# 2. run MarkdownMemBench with the bundled sample dataset
+uv run python -m benchmark.harness.run \
+    --dataset benchmark/datasets/sample \
+    --system mnemoscope \
+    --output benchmark-results.json
 ```
 
-Empty for now. PRs welcome from researchers interested in collaborating on any of the three axes.
+## What is *not* in this folder
+
+Everything user-facing lives in [`packages/`](../packages). The `research/` tree is the slow lane: experiments, papers, calibration. End users never need to install Python or `uv`.
+
+## Contributing
+
+If you are a researcher at Letta, Chroma, Mem0, Cognee, OSU-NLP, Snap Research or any related lab and you see overlap with the predictive classifier, MarkdownMemBench, or the Chroma replication — please [open an issue](https://github.com/toonight/Mnemoscope/issues/new). The project is explicitly designed for this kind of collaboration.
