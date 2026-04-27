@@ -37,6 +37,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          cache-dependency-glob: "research/pyproject.toml"
       - name: uv sync (with dev)
         run: uv sync --all-extras --dev
       - name: ruff
