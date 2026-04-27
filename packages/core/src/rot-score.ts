@@ -3,16 +3,21 @@ import type { VaultSignature, NoteSignature } from "./signatures.js";
 export type { VaultSignature };
 
 /**
- * Predictive context-rot risk score for a vault. The score is a heuristic
- * estimate (0-100) of the likelihood that injecting this corpus into a long-context
- * LLM will trigger meaningful accuracy loss, derived from structural signatures
- * of the corpus (token volume, redundancy proxies, link topology, freshness).
+ * Predictive context-rot risk score for a vault.
  *
- * Future versions will replace the heuristic blend with a calibrated classifier
- * trained on LongMemEval / LoCoMo / MarkdownMemBench, distributed as ONNX.
+ * The score is a heuristic estimate (0–100) of the probability that
+ * injecting this corpus into a long-context LLM will trigger meaningful
+ * accuracy loss. It is derived from structural signatures of the corpus
+ * (token volume, redundancy proxies, link topology, freshness).
  *
- * The current weights are deliberately simple and documented here so that the
- * downstream calibration paper can compare against this baseline.
+ * The current implementation is the **v0 heuristic baseline**. It is
+ * uncalibrated by design: a future calibrated classifier (trained on
+ * LongMemEval / LoCoMo / MarkdownMemBench, exported to ONNX) will replace
+ * the blend below, and the v0 heuristic will become the published baseline
+ * to compare against.
+ *
+ * The thresholds and formulas are documented inline so that the calibration
+ * paper, and any reviewer of the published baseline, can audit each choice.
  */
 export type RotScore = {
   score: number;
@@ -28,7 +33,21 @@ export type RotScore = {
   baselineModel: "v0-heuristic";
 };
 
+/**
+ * Where the degradation curve starts to bend, in approximate tokens.
+ * Calibrated against Chroma's *Context Rot* (July 2025): in their study of
+ * 18 frontier models, accuracy starts to drop noticeably between 10–50K
+ * tokens of context — even on the best 200K-window models. We pick 50K as
+ * the start of the linear penalty zone.
+ *
+ * @see https://www.trychroma.com/research/context-rot
+ */
 const TOKEN_BUDGET_DEGRADATION_START = 50_000;
+
+/**
+ * Hard upper bound where degradation is severe across all 18 models in
+ * Chroma's study; beyond this we cap the volume factor at 100.
+ */
 const TOKEN_BUDGET_DEGRADATION_HARD = 200_000;
 
 export function computeRotScore(sig: VaultSignature): RotScore {
@@ -40,7 +59,9 @@ export function computeRotScore(sig: VaultSignature): RotScore {
     freshnessSpread: freshnessSpreadFactor(sig.notes),
   };
 
-  // Equal-weighted v0 blend. Calibration paper will fit per-factor weights.
+  // Equal-weighted v0 blend. The calibration paper will fit per-factor
+  // weights against measured accuracy loss on LongMemEval / LoCoMo and
+  // any vault-native bench (MarkdownMemBench, planned).
   const score = Math.round(
     (factors.tokenVolume +
       factors.semanticRedundancy +
@@ -68,46 +89,96 @@ export function computeRotScore(sig: VaultSignature): RotScore {
   return { score, factors, dominantFactor, topRiskNotes, baselineModel: "v0-heuristic" };
 }
 
-function tokenVolumeFactor(totalTokens: number): number {
-  if (totalTokens <= TOKEN_BUDGET_DEGRADATION_START) return clamp((totalTokens / TOKEN_BUDGET_DEGRADATION_START) * 30);
+/**
+ * Linear ramp from 0 at empty corpus to 30 at 50K tokens (the start of the
+ * Chroma degradation zone), then a steeper ramp from 30 to 100 between 50K
+ * and 200K tokens. Past 200K, capped at 100.
+ *
+ * The piecewise shape encodes the empirical observation that the *first*
+ * 50K tokens are mostly free, but every additional 30K beyond that is
+ * roughly equivalent to the entire pre-50K budget in terms of risk.
+ */
+export function tokenVolumeFactor(totalTokens: number): number {
+  if (totalTokens <= 0) return 0;
+  if (totalTokens <= TOKEN_BUDGET_DEGRADATION_START) {
+    return clamp((totalTokens / TOKEN_BUDGET_DEGRADATION_START) * 30);
+  }
   const span = TOKEN_BUDGET_DEGRADATION_HARD - TOKEN_BUDGET_DEGRADATION_START;
   const overflow = Math.min(totalTokens - TOKEN_BUDGET_DEGRADATION_START, span);
   return clamp(30 + (overflow / span) * 70);
 }
 
-function semanticRedundancyFactor(notes: NoteSignature[]): number {
+/**
+ * Heuristic v0: redundancy proxy = how much of the corpus is concentrated
+ * in the top 10% of largest notes. High concentration suggests duplicated
+ * themes (the same content rephrased in many places) which acts as
+ * distractor mass for retrieval.
+ *
+ * Real redundancy will use embedding similarity between notes; that
+ * implementation is gated behind the calibrated classifier and is not in
+ * v0 to keep `core` dependency-free.
+ *
+ * Below 0.5 concentration ratio we score 0; above, we ramp linearly to
+ * 100 at full concentration.
+ */
+export function semanticRedundancyFactor(notes: NoteSignature[]): number {
   if (notes.length < 2) return 0;
-  // Heuristic v0: redundancy proxy = how much of the corpus is concentrated in a few large notes.
-  // High concentration suggests duplicated themes; low concentration suggests diversity. Real
-  // redundancy will use embedding similarity.
   const totalChars = notes.reduce((s, n) => s + n.chars, 0);
   if (totalChars === 0) return 0;
   const sorted = [...notes].sort((a, b) => b.chars - a.chars);
-  const topShare = sorted.slice(0, Math.max(1, Math.floor(notes.length * 0.1))).reduce((s, n) => s + n.chars, 0);
+  const topCount = Math.max(1, Math.floor(notes.length * 0.1));
+  const topShare = sorted.slice(0, topCount).reduce((s, n) => s + n.chars, 0);
   const ratio = topShare / totalChars;
   return clamp((ratio - 0.5) * 200);
 }
 
-function distractorDensityFactor(notes: NoteSignature[]): number {
-  // Heuristic v0: many small notes with low link density act as distractors during retrieval.
+/**
+ * Heuristic v0: many small notes (< 200 tokens) act as distractors during
+ * retrieval — they are too short to be authoritative but numerous enough
+ * to dilute attention. Liu et al. 2023 (*Lost in the Middle*) and Chroma
+ * 2025 both report that distractor density matters more than total volume
+ * for some failure modes.
+ *
+ * @see https://arxiv.org/abs/2307.03172
+ * @see https://www.trychroma.com/research/context-rot
+ */
+export function distractorDensityFactor(notes: NoteSignature[]): number {
   if (notes.length === 0) return 0;
   const smallNotes = notes.filter((n) => n.approxTokens > 0 && n.approxTokens < 200);
   return clamp((smallNotes.length / notes.length) * 100);
 }
 
-function structuralCoherenceFactor(notes: NoteSignature[]): number {
-  // Counter-intuitive: Chroma 2025 showed structured haystacks degrade more than shuffled ones.
-  // We treat *very high* link density and *very high* heading density as a risk factor, not a virtue.
+/**
+ * Counter-intuitive v0: Chroma 2025 showed that *structured* haystacks
+ * with strong narrative coherence underperform shuffled haystacks on NIAH.
+ * High link density and high heading density are proxies for narrative
+ * structure, so we treat them as a risk factor — not a virtue.
+ *
+ * The exact relationship is not yet quantified for vaults; this factor is
+ * one of the most important targets of the planned MarkdownMemBench
+ * replication of Chroma's finding.
+ *
+ * @see https://www.trychroma.com/research/context-rot
+ */
+export function structuralCoherenceFactor(notes: NoteSignature[]): number {
   if (notes.length === 0) return 0;
   const avgLinks = notes.reduce((s, n) => s + n.outboundLinks, 0) / notes.length;
   const avgHeadings = notes.reduce((s, n) => s + n.headingCount, 0) / notes.length;
   return clamp(Math.min(100, avgLinks * 5 + avgHeadings * 3));
 }
 
-function freshnessSpreadFactor(notes: NoteSignature[]): number {
+/**
+ * Heuristic v0: a vault where 90%+ of notes are stale (last modified >180
+ * days ago) carries higher rot risk because the working layer is too
+ * small to shield retrieval from old material — the ratio of recent,
+ * topically-relevant notes to background material is too low. Inspired
+ * by Letta's filesystem result and the working / episodic / semantic
+ * memory split that the 2025–2026 agent-memory literature converges on.
+ *
+ * @see https://www.letta.com/blog/benchmarking-ai-agent-memory
+ */
+export function freshnessSpreadFactor(notes: NoteSignature[]): number {
   if (notes.length === 0) return 0;
-  // Heuristic v0: a vault where 90%+ notes are stale (>180 days) carries higher rot risk
-  // because the "working layer" is too small to shield retrieval from old material.
   const stale = notes.filter((n) => n.daysSinceModified > 180).length;
   return clamp((stale / notes.length) * 100);
 }

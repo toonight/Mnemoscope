@@ -1,0 +1,26 @@
+{
+  "name": "@mnemoscope/cli",
+  "version": "0.0.1",
+  "description": "Mnemoscope command-line entrypoints, including the Claude Code PostToolUse hook that auto-journals Write/Edit/MultiEdit operations.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "mnemoscope-record-hook": "./dist/record-hook.js",
+    "mnemoscope-verify": "./dist/verify.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@mnemoscope/core": "0.0.1"
+  }
+}
