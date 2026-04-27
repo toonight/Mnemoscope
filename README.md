@@ -184,14 +184,15 @@ mnemoscope/
 
 ```mermaid
 flowchart TD
-    K[Per-vault Ed25519 keypair<br/>at .mnemoscope/keys/ed25519.key, mode 0600]
-    E1[Entry #1<br/>prevHash=GENESIS<br/>sig=σ1]
-    E2[Entry #2<br/>prevHash=SHA256(σ1)<br/>sig=σ2]
-    E3[Entry #3<br/>prevHash=SHA256(σ2)<br/>sig=σ3]
-    K --> E1
-    K --> E2
-    K --> E3
-    E1 -. chain .-> E2 -. chain .-> E3
+    K["Per-vault Ed25519 keypair<br/>.mnemoscope/keys/ed25519.key (mode 0600)"]
+    E1["Entry 1<br/>prevHash = GENESIS<br/>sig = σ1"]
+    E2["Entry 2<br/>prevHash = SHA256 of σ1<br/>sig = σ2"]
+    E3["Entry 3<br/>prevHash = SHA256 of σ2<br/>sig = σ3"]
+    K -->|signs| E1
+    K -->|signs| E2
+    K -->|signs| E3
+    E1 -.->|chain| E2
+    E2 -.->|chain| E3
     style K fill:#1a2444,stroke:#a78bfa,color:#cbd5e1
     style E1 fill:#0e1530,stroke:#5fd9d1,color:#cbd5e1
     style E2 fill:#0e1530,stroke:#5fd9d1,color:#cbd5e1
