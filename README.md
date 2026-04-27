@@ -8,7 +8,7 @@
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-server%20+%20Obsidian-5fd9d1?style=flat-square"></a>
   <img alt="100% local" src="https://img.shields.io/badge/runs-100%25%20local-a78bfa?style=flat-square">
   <img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-fbbf24?style=flat-square">
-  <img alt="Tests: 28 passing" src="https://img.shields.io/badge/tests-28%20passing-2ea043?style=flat-square">
+  <img alt="Tests: 61 passing" src="https://img.shields.io/badge/tests-61%20passing-2ea043?style=flat-square">
   <img alt="0 vulnerabilities" src="https://img.shields.io/badge/vulnerabilities-0-2ea043?style=flat-square">
   <a href="https://github.com/toonight/Mnemoscope/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/toonight/Mnemoscope/actions/workflows/ci.yml/badge.svg"></a>
 </p>
@@ -218,6 +218,18 @@ mnemoscope-restore-key /path/to/vault /path/to/off-vault-backup.enc.json
 
 Full flow including threat model: [docs/key-escrow.md](./docs/key-escrow.md).
 
+### (Optional) anchor the journal in time with OpenTimestamps
+
+The signed hash chain proves *order*. To prove *absolute time* and stay safe against retroactive rewrites if the per-vault key is ever compromised, anchor each entry's signature to a public Bitcoin-backed OTS calendar:
+
+```bash
+mnemoscope-timestamp /path/to/vault
+# … POSTs SHA-256(sig) per entry to the calendar, writes .ots proofs
+# under <vault>/.mnemoscope/timestamps/. Idempotent on re-run.
+```
+
+Pending proofs are upgraded to fully self-verifying Bitcoin proofs with the upstream `ots upgrade` / `ots verify` CLIs — that part is intentionally not reimplemented. Full threat model and flow: [docs/timestamping.md](./docs/timestamping.md).
+
 ## ✅ What works today (v0.1.0)
 
 | | What | How verified |
@@ -228,10 +240,12 @@ Full flow including threat model: [docs/key-escrow.md](./docs/key-escrow.md).
 | ✅ | `mnemoscope-init` bootstraps a vault idempotently | manual run on multiple fresh + existing vaults |
 | ✅ | `mnemoscope-verify` CLI replays and exits non-zero on any invalid entry | wired to the same `verifyAll` |
 | ✅ | `mnemoscope-record-hook` Claude Code `PostToolUse` hook auto-journals every Write/Edit/MultiEdit | [docs/claude-code-hook.md](./docs/claude-code-hook.md), never blocks |
+| ✅ | `mnemoscope-backup-key` / `mnemoscope-restore-key` encrypt the per-vault Ed25519 key with scrypt + AES-256-GCM | 7 unit tests, full flow in [docs/key-escrow.md](./docs/key-escrow.md) |
+| ✅ | `mnemoscope-timestamp` anchors each entry's signature to a Bitcoin-backed OpenTimestamps calendar; pending `.ots` proofs upgraded with the official `ots` CLI | 12 unit tests + smoke-tested 3 entries → 3 `.ots` files round-trip through `verifyOtsHeaderForDigest`; full flow in [docs/timestamping.md](./docs/timestamping.md) |
 | ✅ | MCP server passes 5 end-to-end tests over real JSON-RPC stdio | `server.test.ts` spawns the binary |
-| ✅ | Obsidian plugin: sidebar view with SVG rot gauge, factor bars, top-risk list, settings tab | 15 KB single-file bundle, no runtime deps |
-| ✅ | Research sub-project: classifier (sklearn → ONNX), MarkdownMemBench v0.1 schema + sample dataset + harness, Chroma replication protocol | self-contained `uv` Python project under [`research/`](./research) |
-| ✅ | CI green on Node 22, **0 npm vulnerabilities**, `npm audit --audit-level=moderate` enforced on every push | GitHub Actions on every push and PR |
+| ✅ | Obsidian plugin: sidebar view with SVG rot gauge, factor bars, top-risk list, settings tab, auto-onboarding modal on first launch | 28 KB single-file bundle, no runtime deps |
+| ✅ | Research sub-project: classifier (sklearn → ONNX), MarkdownMemBench v0.1 schema + sample dataset + harness, Chroma replication protocol with position-of-needle sweep | self-contained `uv` Python project under [`research/`](./research); CI runs `ruff` + 14 pytest cases on every push |
+| ✅ | CI green on Node 22 + Python 3.11, **0 npm vulnerabilities**, `npm audit --audit-level=moderate` enforced on every push | GitHub Actions on every push and PR |
 
 ## 🏗️ Architecture
 

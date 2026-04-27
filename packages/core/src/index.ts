@@ -15,3 +15,13 @@ export {
   restorePrivateKey,
   type EncryptedKeyEnvelope,
 } from "./keys.js";
+export {
+  digestSha256,
+  digestForEntrySig,
+  requestCalendarTimestamp,
+  composeOtsFile,
+  parseOtsFile,
+  verifyOtsHeaderForDigest,
+  type CalendarRequest,
+  type ParsedOtsFile,
+} from "./timestamp.js";

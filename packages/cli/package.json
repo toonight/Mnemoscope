@@ -10,7 +10,8 @@
     "mnemoscope-record-hook": "./dist/record-hook.js",
     "mnemoscope-verify": "./dist/verify.js",
     "mnemoscope-backup-key": "./dist/backup-key.js",
-    "mnemoscope-restore-key": "./dist/restore-key.js"
+    "mnemoscope-restore-key": "./dist/restore-key.js",
+    "mnemoscope-timestamp": "./dist/timestamp.js"
   },
   "files": [
     "dist",
