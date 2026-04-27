@@ -1,16 +1,24 @@
-"""Driver for the Chroma 'structured > shuffled is worse' replication.
+"""Driver for the Chroma 'structured > shuffled is worse' replication,
+augmented with a Liu-et-al-style position-of-needle sweep.
 
-For each (vault, model, context_size, structuring) cell, ask the model
-to recall the needle from its haystack and grade the answer. Write a
-JSON report. Designed to be runnable offline (no API key) — when no
-key is set, an offline grader that does substring matching on the
-haystack itself is used, which gives a sanity check that the haystack
-contains the needle (the key precondition of the experiment).
+For each (vault, model, context_size, structuring, position) cell, ask
+the model to recall the needle from its haystack and grade the answer.
+Write a JSON report. Designed to be runnable offline (no API key) —
+when no key is set, an offline grader that does substring matching on
+the haystack itself is used, which gives a sanity check that the
+haystack contains the needle (the key precondition of the experiment).
+
+The position sweep injects the needle at `start`, `middle`, or `end`
+of the haystack at a controlled offset, with the needle redacted from
+the natural padding, so that a structured-vs-shuffled delta at a
+*fixed* position can be compared to the lost-in-the-middle delta at a
+fixed structuring.
 
 Usage:
-    uv run python -m replication.run \
-        --vaults benchmark/datasets/sample/vaults \
-        --sizes 2000,5000,10000 \
+    uv run python -m replication.run \\
+        --vaults benchmark/datasets/sample/vaults \\
+        --sizes 2000,5000,10000 \\
+        --positions start,middle,end \\
         --out replication/results.json
 """
 from __future__ import annotations
@@ -34,6 +42,7 @@ class Cell:
     model: str
     target_tokens: int
     structuring: str
+    position: str
     needle_md5: str
     correct: bool
     elapsed_ms: int
@@ -74,8 +83,17 @@ def grade_with_llm(haystack: str, needle: Needle, model: str) -> tuple[bool, str
     return correct, answer
 
 
-def run_cell(*, vault_root: Path, model: str, target_tokens: int, structuring: str, needle: Needle, offline: bool) -> Cell:
-    pair = build_pair(vault_root, needle, target_tokens=target_tokens)
+def run_cell(
+    *,
+    vault_root: Path,
+    model: str,
+    target_tokens: int,
+    structuring: str,
+    position: str,
+    needle: Needle,
+    offline: bool,
+) -> Cell:
+    pair = build_pair(vault_root, needle, target_tokens=target_tokens, position=position)
     haystack = pair.structured if structuring == "structured" else pair.shuffled
     started = time.monotonic()
     if offline:
@@ -89,6 +107,7 @@ def run_cell(*, vault_root: Path, model: str, target_tokens: int, structuring: s
         model=model,
         target_tokens=target_tokens,
         structuring=structuring,
+        position=position,
         needle_md5=needle.source_md5,
         correct=correct,
         elapsed_ms=elapsed_ms,
@@ -97,44 +116,89 @@ def run_cell(*, vault_root: Path, model: str, target_tokens: int, structuring: s
 
 
 def aggregate(cells: list[Cell]) -> dict:
-    """Compute the headline numbers: per-(model, size) accuracy by structuring,
-    and the structured-minus-shuffled delta. Positive delta means structure helps;
-    negative delta replicates Chroma's finding."""
-    by_key: dict[tuple[str, int], dict[str, list[bool]]] = {}
+    """Compute the headline numbers:
+    - per-(model, size, position) accuracy by structuring + structured-shuffled delta
+    - per-(model, size, structuring) accuracy by position + position-effect deltas
+      (start - middle, end - middle), so 'lost in the middle' shows as positive
+      values on the structured row.
+    """
+    by_struct: dict[tuple[str, int, str], dict[str, list[bool]]] = {}
+    by_position: dict[tuple[str, int, str], dict[str, list[bool]]] = {}
     for c in cells:
-        key = (c.model, c.target_tokens)
-        by_key.setdefault(key, {"structured": [], "shuffled": []})[c.structuring].append(c.correct)
+        struct_key = (c.model, c.target_tokens, c.position)
+        by_struct.setdefault(struct_key, {"structured": [], "shuffled": []})[c.structuring].append(c.correct)
+        pos_key = (c.model, c.target_tokens, c.structuring)
+        by_position.setdefault(pos_key, {"start": [], "middle": [], "end": []})[c.position].append(c.correct)
 
-    rows = []
-    for (model, size), buckets in sorted(by_key.items()):
+    structuring_rows = []
+    for (model, size, position), buckets in sorted(by_struct.items()):
         s_acc = _acc(buckets["structured"])
         h_acc = _acc(buckets["shuffled"])
         delta = (s_acc - h_acc) if (s_acc is not None and h_acc is not None) else None
-        rows.append({
+        structuring_rows.append({
             "model": model,
             "target_tokens": size,
+            "position": position,
             "structured_accuracy": s_acc,
             "shuffled_accuracy": h_acc,
             "delta_structured_minus_shuffled": delta,
             "n_structured": len(buckets["structured"]),
             "n_shuffled": len(buckets["shuffled"]),
         })
-    deltas = [r["delta_structured_minus_shuffled"] for r in rows if r["delta_structured_minus_shuffled"] is not None]
-    summary = {
-        "rows": rows,
-        "mean_delta": statistics.fmean(deltas) if deltas else None,
-        "median_delta": statistics.median(deltas) if deltas else None,
-        "n_rows": len(rows),
-        "interpretation": _interpret(deltas),
+
+    position_rows = []
+    for (model, size, structuring), buckets in sorted(by_position.items()):
+        start_acc = _acc(buckets["start"])
+        middle_acc = _acc(buckets["middle"])
+        end_acc = _acc(buckets["end"])
+        position_rows.append({
+            "model": model,
+            "target_tokens": size,
+            "structuring": structuring,
+            "start_accuracy": start_acc,
+            "middle_accuracy": middle_acc,
+            "end_accuracy": end_acc,
+            "delta_start_minus_middle": _safe_sub(start_acc, middle_acc),
+            "delta_end_minus_middle": _safe_sub(end_acc, middle_acc),
+            "n_start": len(buckets["start"]),
+            "n_middle": len(buckets["middle"]),
+            "n_end": len(buckets["end"]),
+        })
+
+    structuring_deltas = [
+        r["delta_structured_minus_shuffled"]
+        for r in structuring_rows
+        if r["delta_structured_minus_shuffled"] is not None
+    ]
+    middle_drops = [
+        d
+        for r in position_rows
+        for d in (r["delta_start_minus_middle"], r["delta_end_minus_middle"])
+        if d is not None
+    ]
+
+    return {
+        "structuring_rows": structuring_rows,
+        "position_rows": position_rows,
+        "mean_structuring_delta": statistics.fmean(structuring_deltas) if structuring_deltas else None,
+        "median_structuring_delta": statistics.median(structuring_deltas) if structuring_deltas else None,
+        "mean_middle_drop": statistics.fmean(middle_drops) if middle_drops else None,
+        "n_structuring_rows": len(structuring_rows),
+        "n_position_rows": len(position_rows),
+        "structuring_interpretation": _interpret_structuring(structuring_deltas),
+        "position_interpretation": _interpret_position(middle_drops),
     }
-    return summary
 
 
 def _acc(votes: list[bool]) -> float | None:
     return None if not votes else sum(votes) / len(votes)
 
 
-def _interpret(deltas: list[float]) -> str:
+def _safe_sub(a: float | None, b: float | None) -> float | None:
+    return None if a is None or b is None else a - b
+
+
+def _interpret_structuring(deltas: list[float]) -> str:
     if not deltas:
         return "no data"
     pos = sum(1 for d in deltas if d > 0.0)
@@ -146,11 +210,26 @@ def _interpret(deltas: list[float]) -> str:
     return "ambiguous / underpowered — need more cells"
 
 
+def _interpret_position(middle_drops: list[float]) -> str:
+    if not middle_drops:
+        return "no data"
+    # A *positive* (start-middle) or (end-middle) means the middle is
+    # the worst position — i.e. lost-in-the-middle.
+    pos = sum(1 for d in middle_drops if d > 0.0)
+    neg = sum(1 for d in middle_drops if d < 0.0)
+    if pos > neg * 2:
+        return "MIDDLE is worst — replicates Liu et al. 2023 lost-in-the-middle"
+    if neg > pos * 2:
+        return "MIDDLE is best — inverse of lost-in-the-middle on this corpus"
+    return "no clear position effect / underpowered"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--vaults", required=True, type=Path, help="Directory containing one or more vault subdirectories.")
     parser.add_argument("--sizes", default="2000,5000,10000", help="Comma-separated target token sizes.")
     parser.add_argument("--models", default="gpt-4o-mini", help="Comma-separated model names.")
+    parser.add_argument("--positions", default="start,middle,end", help="Comma-separated needle positions: start | middle | end.")
     parser.add_argument("--needles-per-vault", type=int, default=4)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--offline", action="store_true", help="Force offline grading even if MMB_LLM_API_KEY is set.")
@@ -158,6 +237,10 @@ def main() -> None:
 
     sizes = [int(s.strip()) for s in args.sizes.split(",") if s.strip()]
     models = [m.strip() for m in args.models.split(",") if m.strip()]
+    positions = [p.strip() for p in args.positions.split(",") if p.strip()]
+    for p in positions:
+        if p not in ("start", "middle", "end"):
+            raise SystemExit(f"invalid position {p!r}; must be one of start | middle | end")
     offline = args.offline or not os.environ.get("MMB_LLM_API_KEY")
 
     cells: list[Cell] = []
@@ -176,19 +259,24 @@ def main() -> None:
             for size in sizes:
                 for needle in needles:
                     for structuring in ("structured", "shuffled"):
-                        c = run_cell(
-                            vault_root=vault_root,
-                            model=model,
-                            target_tokens=size,
-                            structuring=structuring,
-                            needle=needle,
-                            offline=offline,
-                        )
-                        cells.append(c)
+                        for position in positions:
+                            c = run_cell(
+                                vault_root=vault_root,
+                                model=model,
+                                target_tokens=size,
+                                structuring=structuring,
+                                position=position,
+                                needle=needle,
+                                offline=offline,
+                            )
+                            cells.append(c)
 
     report = {
         "config": {
-            "sizes": sizes, "models": models, "offline": offline,
+            "sizes": sizes,
+            "models": models,
+            "positions": positions,
+            "offline": offline,
             "needles_per_vault": args.needles_per_vault,
             "vaults": [str(p.name) for p in vault_roots],
         },
@@ -199,8 +287,10 @@ def main() -> None:
     args.out.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"\nwrote {args.out}")
     print(f"  cells: {len(cells)}")
-    print(f"  mean delta (structured - shuffled): {report['summary']['mean_delta']}")
-    print(f"  interpretation: {report['summary']['interpretation']}")
+    print(f"  mean structuring delta (struct - shuf): {report['summary']['mean_structuring_delta']}")
+    print(f"  mean middle-drop (start/end - middle): {report['summary']['mean_middle_drop']}")
+    print(f"  structuring: {report['summary']['structuring_interpretation']}")
+    print(f"  position:    {report['summary']['position_interpretation']}")
 
 
 if __name__ == "__main__":
