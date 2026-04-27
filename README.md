@@ -78,11 +78,11 @@ Then call any of the four tools:
 
 ```mermaid
 flowchart LR
-    A[Obsidian vault<br/>*.md files] --> B[@mnemoscope/core<br/>signatures · rot · tiering · journal]
-    B --> C[@mnemoscope/mcp-server<br/>stdio MCP]
-    B --> D[@mnemoscope/obsidian-plugin<br/>UI · rot gauge · journal viewer]
-    C -->|tools| E((Claude Code<br/>Cursor<br/>ChatGPT desktop))
-    F[research/<br/>Python · uv · ONNX] -.->|trained classifier| B
+    A["Obsidian vault<br/>Markdown files"] --> B["mnemoscope/core<br/>signatures - rot - tiering - journal"]
+    B --> C["mnemoscope/mcp-server<br/>stdio MCP"]
+    B --> D["mnemoscope/obsidian-plugin<br/>UI - rot gauge - journal viewer"]
+    C -->|tools| E(("Claude Code<br/>Cursor<br/>ChatGPT desktop"))
+    F["research/<br/>Python - uv - ONNX"] -.->|trained classifier| B
     style A fill:#1a2444,stroke:#a78bfa,color:#cbd5e1
     style B fill:#0e1530,stroke:#5fd9d1,color:#cbd5e1
     style C fill:#0e1530,stroke:#5fd9d1,color:#cbd5e1
