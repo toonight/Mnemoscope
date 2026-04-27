@@ -1,0 +1,40 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.toonight/mnemoscope",
+  "title": "Mnemoscope",
+  "description": "Predictive context-rot scoring, Ed25519-signed hash-chained journal of agent operations, and working/episodic/semantic tiering for LLM agents on Markdown vaults. 100% local; ships an MCP server, an Obsidian plugin, and a Claude Code PostToolUse hook.",
+  "websiteUrl": "https://github.com/toonight/Mnemoscope",
+  "repository": {
+    "url": "https://github.com/toonight/Mnemoscope",
+    "source": "github",
+    "subfolder": "packages/mcp-server"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@mnemoscope/mcp-server",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "categories": ["memory", "developer-tools", "knowledge-management"],
+      "tags": [
+        "memory",
+        "obsidian",
+        "markdown",
+        "claude-code",
+        "forensics",
+        "rot-detection",
+        "tiered-memory",
+        "ed25519",
+        "opentimestamps"
+      ]
+    }
+  }
+}
