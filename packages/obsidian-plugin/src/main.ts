@@ -1,5 +1,6 @@
 import {
   ItemView,
+  Modal,
   Notice,
   Plugin,
   PluginSettingTab,
@@ -8,19 +9,44 @@ import {
   type App,
   type FileSystemAdapter,
 } from "obsidian";
-import { computeRotScore, extractSignature, type RotScore } from "@mnemoscope/core";
+import { existsSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { Journal, computeRotScore, extractSignature, type RotScore } from "@mnemoscope/core";
 
 interface MnemoscopeSettings {
   workingMaxAgeDays: number;
   episodicMaxAgeDays: number;
   autoScanOnOpen: boolean;
+  onboardingDismissed: boolean;
 }
 
 const DEFAULT_SETTINGS: MnemoscopeSettings = {
   workingMaxAgeDays: 7,
   episodicMaxAgeDays: 90,
   autoScanOnOpen: false,
+  onboardingDismissed: false,
 };
+
+const MNEMOSCOPE_DIR = ".mnemoscope";
+const ONBOARDING_README = `# .mnemoscope/
+
+This directory is created and managed by Mnemoscope, an open-source
+observability layer for LLM agent memory on Markdown vaults.
+
+  https://github.com/toonight/Mnemoscope
+
+Contents:
+
+  keys/ed25519.key   — per-vault Ed25519 PRIVATE KEY (mode 0600).
+                       Treat as a secret. Back up. Do not commit.
+  keys/ed25519.pub   — public half, safe to share.
+  journal.jsonl      — append-only signed journal of agent operations.
+
+If you want to disable Mnemoscope for this vault, simply remove this
+directory. The Mnemoscope MCP server, Obsidian plugin, and Claude Code
+hook all detect its absence and exit cleanly.
+`;
 
 const VIEW_TYPE_MNEMOSCOPE = "mnemoscope-view";
 
@@ -46,11 +72,18 @@ export default class MnemoscopePlugin extends Plugin {
       callback: () => this.scanAndNotify(),
     });
 
+    this.addCommand({
+      id: "initialize-vault",
+      name: "Initialize this vault for Mnemoscope",
+      callback: () => void this.initializeVault({ silent: false }),
+    });
+
     this.addSettingTab(new MnemoscopeSettingTab(this.app, this));
 
-    if (this.settings.autoScanOnOpen) {
-      this.app.workspace.onLayoutReady(() => void this.activateView());
-    }
+    this.app.workspace.onLayoutReady(() => {
+      if (this.settings.autoScanOnOpen) void this.activateView();
+      void this.maybeOfferOnboarding();
+    });
   }
 
   override onunload(): void {
@@ -112,6 +145,114 @@ export default class MnemoscopePlugin extends Plugin {
   resolveVaultPath(): string | null {
     const adapter = this.app.vault.adapter as FileSystemAdapter;
     return typeof adapter.getBasePath === "function" ? adapter.getBasePath() : null;
+  }
+
+  isInitialized(): boolean {
+    const vaultPath = this.resolveVaultPath();
+    if (!vaultPath) return false;
+    return existsSync(join(vaultPath, MNEMOSCOPE_DIR));
+  }
+
+  /**
+   * On layout-ready, if the vault has no `.mnemoscope/` and the user
+   * has not previously dismissed the prompt, surface a one-time modal
+   * that explains what initialization will do and lets them opt in.
+   * Initialization itself is identical to `mnemoscope-init`: mkdir
+   * `.mnemoscope/`, generate a per-vault Ed25519 keypair via
+   * `Journal.open`, and write a small README.
+   */
+  async maybeOfferOnboarding(): Promise<void> {
+    if (this.settings.onboardingDismissed) return;
+    if (this.isInitialized()) return;
+    const vaultPath = this.resolveVaultPath();
+    if (!vaultPath) return;
+
+    new OnboardingModal(this.app, {
+      vaultPath,
+      onAccept: () => void this.initializeVault({ silent: false }),
+      onDismiss: async () => {
+        this.settings.onboardingDismissed = true;
+        await this.saveSettings();
+      },
+    }).open();
+  }
+
+  async initializeVault(opts: { silent: boolean }): Promise<void> {
+    const vaultPath = this.resolveVaultPath();
+    if (!vaultPath) {
+      if (!opts.silent) new Notice("Mnemoscope: this vault is not on the local filesystem.");
+      return;
+    }
+    const mnemoscopeDir = join(vaultPath, MNEMOSCOPE_DIR);
+    const journalPath = join(mnemoscopeDir, "journal.jsonl");
+    const readmePath = join(mnemoscopeDir, "README.txt");
+
+    try {
+      await mkdir(mnemoscopeDir, { recursive: true });
+      const journal = await Journal.open(journalPath, "obsidian-plugin");
+      const fingerprint = journal.publicKeyFingerprint();
+      if (!existsSync(readmePath)) {
+        await writeFile(readmePath, ONBOARDING_README, "utf8");
+      }
+      this.settings.onboardingDismissed = true;
+      await this.saveSettings();
+      new Notice(`Mnemoscope initialized. Public key fingerprint: ${fingerprint}`, 8_000);
+    } catch (err) {
+      console.error("[mnemoscope] initialize failed", err);
+      new Notice(`Mnemoscope: initialize failed (${(err as Error).message})`);
+    }
+  }
+}
+
+interface OnboardingModalOpts {
+  vaultPath: string;
+  onAccept: () => void;
+  onDismiss: () => void | Promise<void>;
+}
+
+class OnboardingModal extends Modal {
+  constructor(app: App, private readonly opts: OnboardingModalOpts) {
+    super(app);
+  }
+
+  override onOpen(): void {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("h2", { text: "Set up Mnemoscope for this vault?" });
+
+    contentEl.createEl("p", {
+      text: "Mnemoscope is an open-source observability layer for LLM agent memory. "
+        + "Initializing creates a small private directory inside this vault:",
+    });
+
+    const list = contentEl.createEl("ul");
+    list.createEl("li", { text: `${this.opts.vaultPath}/.mnemoscope/` });
+    list.createEl("li", { text: "  ↳ keys/ed25519.key   (per-vault private key, mode 0600)" });
+    list.createEl("li", { text: "  ↳ keys/ed25519.pub   (public half)" });
+    list.createEl("li", { text: "  ↳ journal.jsonl      (signed append-only journal)" });
+    list.createEl("li", { text: "  ↳ README.txt         (what this directory is)" });
+
+    contentEl.createEl("p", {
+      text: "Nothing leaves your machine. You can disable Mnemoscope for this vault any "
+        + "time by deleting that directory.",
+    });
+
+    const buttons = contentEl.createDiv({ cls: "modal-button-container" });
+    const initBtn = buttons.createEl("button", { text: "Initialize" });
+    initBtn.addClass("mod-cta");
+    initBtn.onclick = () => {
+      this.opts.onAccept();
+      this.close();
+    };
+    const dismissBtn = buttons.createEl("button", { text: "Not now" });
+    dismissBtn.onclick = () => {
+      void this.opts.onDismiss();
+      this.close();
+    };
+  }
+
+  override onClose(): void {
+    this.contentEl.empty();
   }
 }
 
@@ -238,6 +379,28 @@ class MnemoscopeSettingTab extends PluginSettingTab {
           this.plugin.settings.autoScanOnOpen = v;
           await this.plugin.saveSettings();
         }),
+      );
+
+    const initialized = this.plugin.isInitialized();
+    new Setting(containerEl)
+      .setName(initialized ? "Vault is initialized" : "Initialize vault")
+      .setDesc(
+        initialized
+          ? "This vault has a .mnemoscope/ directory and a per-vault keypair."
+          : "Create .mnemoscope/, generate a per-vault Ed25519 keypair, and start signing the journal.",
+      )
+      .addButton((b) =>
+        b
+          .setButtonText(initialized ? "Re-check" : "Initialize")
+          .setCta()
+          .onClick(async () => {
+            if (initialized) {
+              new Notice("Mnemoscope: this vault is already initialized.");
+            } else {
+              await this.plugin.initializeVault({ silent: false });
+            }
+            this.display();
+          }),
       );
   }
 }
