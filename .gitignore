@@ -26,3 +26,7 @@ research/.ruff_cache/
 
 # Demo vault state — keys/journal generated locally, never committed
 examples/demo-vault/.mnemoscope/
+
+# Replication runner outputs (regenerated on each run)
+research/replication/results-*.json
+research/replication/REPORT-*.md

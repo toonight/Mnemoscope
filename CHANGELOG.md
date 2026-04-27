@@ -9,6 +9,9 @@ All notable changes to Mnemoscope are documented here. The project follows [Keep
 - `mnemoscope-init` CLI that bootstraps `<vault>/.mnemoscope/` (creates state dir, generates per-vault Ed25519 keypair, writes a small README explaining the directory). Idempotent.
 - Obsidian plugin upgrade: real sidebar view with an SVG rot-risk gauge, per-factor breakdown bars, top-risk-notes list, and a settings tab to tune working/episodic age thresholds and toggle auto-scan on Obsidian open. Bundle grew from 8 KB to 15 KB.
 - `.github/workflows/release.yml` — pushes a `v*.*.*` tag to publish `@mnemoscope/{core,mcp-server,cli}` to npm with provenance and create a matching GitHub Release. Requires `NPM_TOKEN` repo secret.
+- `examples/demo-vault/` — a 13-note synthetic vault built so every rot factor moves; bundled `SAMPLE-OUTPUT.md` reproduces the full pipeline end-to-end.
+- `docs/demo/` — a self-contained HTML demo page (gauge + factor bars + top-risk + both verify states + tier counts + hash chain), with three Playwright-rendered screenshots in `docs/screenshots/` embedded near the top of the README.
+- **Chroma replication runner** — `research/replication/` ships `needles.py`, `haystack.py`, `run.py`, `analyze.py`. Runs offline (substring grading sanity check) or against any OpenAI-compatible endpoint (`MMB_LLM_API_KEY`). Smoke-tested end-to-end on the bundled sample dataset: 24 cells, JSON report + Markdown report, ∆ = 0 in offline mode (haystack builder produces correct corpora, needles always present).
 
 ## [0.1.0] — 2026-04-26
 
