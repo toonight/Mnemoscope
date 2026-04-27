@@ -26,7 +26,6 @@ from pathlib import Path
 
 from .needles import Needle
 
-
 _APPROX_CHARS_PER_TOKEN = 4
 _PARAGRAPH_RE = re.compile(r"\n\s*\n")
 _NEEDLE_MARKER = "[MNEMOSCOPE-NEEDLE]"

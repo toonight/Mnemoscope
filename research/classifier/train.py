@@ -10,13 +10,12 @@ import json
 from pathlib import Path
 
 import numpy as np
+import onnxruntime as ort
 import pandas as pd
+from skl2onnx import to_onnx
 from sklearn.linear_model import RidgeCV
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import train_test_split
-from skl2onnx import to_onnx
-import onnxruntime as ort
-
 
 FEATURES = [
     "token_volume",

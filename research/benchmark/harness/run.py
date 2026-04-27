@@ -13,11 +13,11 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import dataclass, asdict
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable
 
-from .sut import SystemUnderTest, load_system, Answer
+from .sut import Answer, SystemUnderTest, load_system
 
 
 @dataclass

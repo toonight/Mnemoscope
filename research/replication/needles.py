@@ -18,7 +18,6 @@ import hashlib
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 # Match a sentence: anything ending in . ! or ? followed by whitespace or EOL.
 _SENT_RE = re.compile(r"(?<=[.!?])\s+")
