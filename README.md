@@ -206,8 +206,6 @@ flowchart TD
 | Reorder two entries | both signatures still verify but `prevHash` chain breaks |
 | Forge an entry with a different key | `keyFingerprint` flagged as foreign |
 
-Threat model in full: [SECURITY.md](./SECURITY.md).
-
 ## 🤝 Voisins (not competitors)
 
 | Project | What it does | Where Mnemoscope sits |
@@ -252,10 +250,6 @@ Full list & history: [CHANGELOG.md](./CHANGELOG.md).
 PRs are welcome but the most useful first step is opening an issue describing what you want to do. See [CONTRIBUTING.md](./CONTRIBUTING.md) for code style and process.
 
 If you are a **researcher** at Letta, Chroma, Mem0, Cognee, OSU-NLP, Snap Research, or any related lab, and you see overlap with the *Predictive Context Rot* or *MarkdownMemBench* axes, please reach out — the project is explicitly designed for this.
-
-## 🛡️ Security
-
-See [SECURITY.md](./SECURITY.md) for the threat model and the disclosure process. Critical issues (signing-key disclosure, signature forgery) are acknowledged within 24 hours.
 
 ## 📜 License
 
