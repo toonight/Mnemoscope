@@ -24,23 +24,22 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org/
           cache: npm
+      # npm OIDC trusted publishing requires npm >= 11.5.1; Node 22 ships with 10.x.
+      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run build
       - run: npm run typecheck
       - run: npm run test
       - run: npm audit --audit-level=moderate
+      # Publishing uses npm OIDC trusted publishing (no NPM_TOKEN). The trusted
+      # publisher is configured on npmjs.com for the @mnemoscope scope:
+      # org -> Trusted Publishers -> GitHub Actions -> toonight/Mnemoscope, workflow release.yml.
       - name: Publish @mnemoscope/core
         run: npm publish --workspace @mnemoscope/core --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish @mnemoscope/mcp-server
         run: npm publish --workspace @mnemoscope/mcp-server --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Publish @mnemoscope/cli
         run: npm publish --workspace @mnemoscope/cli --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
