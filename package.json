@@ -14,7 +14,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "tsc -b packages/core packages/mcp-server packages/cli && npm run build -w @mnemoscope/obsidian-plugin",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo"
