@@ -4,6 +4,12 @@ All notable changes to Mnemoscope are documented here. The project follows [Keep
 
 ## [Unreleased]
 
+### Added
+
+- `mnemoscope-init` CLI that bootstraps `<vault>/.mnemoscope/` (creates state dir, generates per-vault Ed25519 keypair, writes a small README explaining the directory). Idempotent.
+- Obsidian plugin upgrade: real sidebar view with an SVG rot-risk gauge, per-factor breakdown bars, top-risk-notes list, and a settings tab to tune working/episodic age thresholds and toggle auto-scan on Obsidian open. Bundle grew from 8 KB to 15 KB.
+- `.github/workflows/release.yml` — pushes a `v*.*.*` tag to publish `@mnemoscope/{core,mcp-server,cli}` to npm with provenance and create a matching GitHub Release. Requires `NPM_TOKEN` repo secret.
+
 ## [0.1.0] — 2026-04-26
 
 First public, *production-grade* release. The previous tag was a scaffold; this release adds the things that make the scaffold actually load-bearing: chained Ed25519 signatures, a Claude Code auto-journal hook, integration tests against the real MCP server, and a complete research sub-project.

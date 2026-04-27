@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      REF_NAME: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm audit --audit-level=moderate
+      - name: Publish @mnemoscope/core
+        run: npm publish --workspace @mnemoscope/core --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish @mnemoscope/mcp-server
+        run: npm publish --workspace @mnemoscope/mcp-server --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish @mnemoscope/cli
+        run: npm publish --workspace @mnemoscope/cli --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$REF_NAME" \
+            --title "$REF_NAME" \
+            --notes "Published @mnemoscope/core, @mnemoscope/mcp-server, and @mnemoscope/cli at tag $REF_NAME. See CHANGELOG.md for details." \
+            --verify-tag

@@ -6,6 +6,7 @@
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
+    "mnemoscope-init": "./dist/init.js",
     "mnemoscope-record-hook": "./dist/record-hook.js",
     "mnemoscope-verify": "./dist/verify.js"
   },

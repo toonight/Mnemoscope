@@ -52,7 +52,7 @@ That triple gap is the only thing this project is trying to fill.
 | ✅ | `mnemoscope-verify` CLI replays the journal and exits non-zero on any invalid entry | wired to the same `verifyAll` |
 | ✅ | `mnemoscope-record-hook` is a Claude Code `PostToolUse` hook that auto-journals every Write / Edit / MultiEdit | [docs/claude-code-hook.md](./docs/claude-code-hook.md); never blocks the tool call |
 | ✅ | MCP server passes 5 end-to-end integration tests over real JSON-RPC stdio | `server.test.ts` spawns the binary and exchanges real messages |
-| ✅ | Obsidian plugin compiles to a single 8 KB bundle | esbuild config in `packages/obsidian-plugin` |
+| ✅ | Obsidian plugin compiles to a single 15 KB bundle (sidebar view with SVG rot gauge, factor breakdown bars, top-risk list, settings tab) | esbuild config in `packages/obsidian-plugin` |
 | ✅ | Research sub-project: classifier (sklearn → ONNX, synthetic baseline), MarkdownMemBench v0.1 schema + sample dataset + harness, Chroma replication protocol | `research/` is a self-contained `uv` project |
 | ✅ | CI green on Node 22, **0 npm vulnerabilities**, `npm audit --audit-level=moderate` enforced on every push | GitHub Actions on every push |
 
@@ -66,6 +66,20 @@ npm run build
 npm test                 # 28 tests, ~6s
 npm audit                # 0 vulnerabilities
 ```
+
+### Initialise a vault
+
+```bash
+npm link --workspace @mnemoscope/cli
+mnemoscope-init /path/to/vault
+# Initialized Mnemoscope in /path/to/vault.
+#   state dir:   /path/to/vault/.mnemoscope
+#   journal:     /path/to/vault/.mnemoscope/journal.jsonl
+#   public key:  /path/to/vault/.mnemoscope/keys/ed25519.pub
+#   fingerprint: 7a3c4d…
+```
+
+`mnemoscope-init` is idempotent — re-running on an already-initialised vault leaves the keypair and journal alone and exits 0.
 
 ### Use Mnemoscope from Claude Code (or any MCP client)
 
@@ -237,6 +251,7 @@ Each thread lives in [`research/`](./research) and will produce a preprint along
 
 - [ ] Dogfood the auto-journal hook on the author's vault for two full weeks; tune heuristics against observed Claude Code session outcomes
 - [ ] Submit the MCP server to [Smithery](https://smithery.ai), [PulseMCP](https://www.pulsemcp.com), [Glama](https://glama.ai) — registry metadata files (`smithery.yaml`, `glama.json`) already in this repo
+- [ ] Set the repo's `NPM_TOKEN` secret so that `git tag v0.1.0 && git push --tags` triggers the release workflow that publishes `@mnemoscope/{core,mcp-server,cli}` to npm with provenance
 - [ ] Submit the Obsidian plugin to community plugins
 - [ ] Replace the v0 heuristic rot score with the calibrated ONNX classifier (load via `onnxruntime-node` from `core` as an optional dependency)
 - [ ] Release **MarkdownMemBench v1** with 50–200 contributed real vaults
