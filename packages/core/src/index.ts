@@ -8,3 +8,10 @@ export {
   type VerifiedJournalEntry,
   GENESIS_PREV_HASH,
 } from "./journal.js";
+export {
+  encryptPrivateKeyPem,
+  decryptPrivateKeyPem,
+  backupPrivateKey,
+  restorePrivateKey,
+  type EncryptedKeyEnvelope,
+} from "./keys.js";

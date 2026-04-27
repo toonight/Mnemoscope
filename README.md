@@ -204,6 +204,20 @@ mnemoscope-verify /path/to/vault
 - deletion or reordering (`prevHash` chain break),
 - entries signed by a key the current vault does not own.
 
+### (Optional) back up the per-vault private key
+
+If you lose `<vault>/.mnemoscope/keys/ed25519.key`, the journal becomes unverifiable. The bundled backup CLIs encrypt the key with a passphrase (scrypt + AES-256-GCM, no extra deps) and let you restore it later:
+
+```bash
+mnemoscope-backup-key /path/to/vault /path/to/off-vault-backup.enc.json
+# … prompts for a passphrase, writes chmod 0600 …
+
+mnemoscope-restore-key /path/to/vault /path/to/off-vault-backup.enc.json
+# … prompts for the same passphrase, writes the key back into the vault …
+```
+
+Full flow including threat model: [docs/key-escrow.md](./docs/key-escrow.md).
+
 ## ✅ What works today (v0.1.0)
 
 | | What | How verified |
@@ -314,7 +328,7 @@ Each thread lives in [`research/`](./research) and will produce a preprint along
 - [ ] Replace the v0 heuristic rot score with the calibrated ONNX classifier (load via `onnxruntime-node` from `core` as an optional dependency)
 - [ ] Release **MarkdownMemBench v1** with 50–200 contributed real vaults
 - [ ] Preprint #1: replication of Chroma *Context Rot* on real Obsidian vaults
-- [ ] Off-vault key escrow + periodic remote attestation (defense-in-depth for the journal)
+- [ ] Periodic remote attestation (timestamping the journal head with an external notary, OTS-style)
 
 Full history: [CHANGELOG.md](./CHANGELOG.md).
 

@@ -12,6 +12,8 @@ All notable changes to Mnemoscope are documented here. The project follows [Keep
 - `examples/demo-vault/` — a 13-note synthetic vault built so every rot factor moves; bundled `SAMPLE-OUTPUT.md` reproduces the full pipeline end-to-end.
 - `docs/demo/` — a self-contained HTML demo page (gauge + factor bars + top-risk + both verify states + tier counts + hash chain), with three Playwright-rendered screenshots in `docs/screenshots/` embedded near the top of the README.
 - **Chroma replication runner** — `research/replication/` ships `needles.py`, `haystack.py`, `run.py`, `analyze.py`. Runs offline (substring grading sanity check) or against any OpenAI-compatible endpoint (`MMB_LLM_API_KEY`). Smoke-tested end-to-end on the bundled sample dataset: 24 cells, JSON report + Markdown report, ∆ = 0 in offline mode (haystack builder produces correct corpora, needles always present).
+- **Encrypted off-vault key backup** — new `core/keys.ts` module + `mnemoscope-backup-key` and `mnemoscope-restore-key` CLIs. AES-256-GCM + scrypt (N=32768, r=8, p=1), self-describing JSON envelope, no external dependencies. Backup file is `chmod 0600`; restore refuses to overwrite an existing key without `--overwrite`. 7 unit tests cover round-trip, wrong-passphrase failure, IV randomness, file-mode enforcement, version-rejection. Full flow documented in `docs/key-escrow.md`.
+- **GitHub Actions Node 24 opt-in** — both workflows now set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` so the Node 20 deprecation warning is replaced by an informational "forced to Node 24" notice.
 
 ## [0.1.0] — 2026-04-26
 
