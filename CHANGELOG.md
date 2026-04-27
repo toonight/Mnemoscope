@@ -42,7 +42,7 @@ First public, *production-grade* release. The previous tag was a scaffold; this 
   - `research/classifier/` — sklearn → ONNX pipeline with synthetic baseline data so the train→export→round-trip path is mechanically verified.
   - `research/benchmark/` — **MarkdownMemBench v0.1** schema, JSON-Schema validator, hand-crafted sample dataset (1 vault, 5 tasks across recall / multi-hop / cross-doc-negation / aggregation / write-task), reference harness with two SUTs (`naive`, `mnemoscope`).
   - `research/replication/` — protocol document for replicating Chroma's *Context Rot* "structured > shuffled is worse" finding on real Markdown vaults.
-- **Documentation**: `docs/banner.svg`, `docs/logo.svg`, `docs/claude-code-hook.md`, `SECURITY.md`, `CHANGELOG.md`.
+- **Documentation**: `docs/banner.svg`, `docs/logo.svg`, `docs/claude-code-hook.md`, `CHANGELOG.md`.
 - **CI**: lint-free build, full test suite, and `npm audit --audit-level=moderate` on every push.
 
 ### Verified

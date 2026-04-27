@@ -137,7 +137,7 @@ git clone https://github.com/toonight/Mnemoscope
 cd Mnemoscope
 npm install
 npm run build
-npm test                           # 28 tests, ~6 s
+npm test                           # 47 tests across core + mcp-server
 npm audit                          # 0 vulnerabilities
 
 # Make the CLI binaries available on your PATH
