@@ -10,9 +10,8 @@ build/
 coverage/
 *.tsbuildinfo
 
-# Obsidian plugin build artifacts
+# Obsidian plugin build artifacts (styles.css is source, do not ignore)
 packages/obsidian-plugin/main.js
-packages/obsidian-plugin/styles.css
 
 # Python (research/)
 research/.venv/

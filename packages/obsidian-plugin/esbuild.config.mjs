@@ -1,5 +1,4 @@
 import { build, context } from "esbuild";
-import { copyFileSync } from "node:fs";
 
 const isProduction = process.argv[2] === "production";
 
@@ -19,7 +18,6 @@ const options = {
 
 if (isProduction) {
   await build(options);
-  copyFileSync("styles.css", "styles.css");
 } else {
   const ctx = await context(options);
   await ctx.watch();

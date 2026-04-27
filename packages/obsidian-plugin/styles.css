@@ -1,0 +1,72 @@
+.mnemoscope-view {
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+.mnemoscope-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.mnemoscope-header h3 {
+  margin: 0;
+}
+.mnemoscope-status {
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.mnemoscope-gauge {
+  margin: 0.5rem 0 1rem 0;
+}
+.mnemoscope-summary p {
+  margin: 0.15rem 0;
+  color: var(--text-muted);
+}
+.mnemoscope-factors {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.mnemoscope-factors li {
+  display: grid;
+  grid-template-columns: 11rem 1fr 2.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+}
+.mnemoscope-factor-name {
+  font-family: var(--font-monospace);
+  font-size: 0.8rem;
+}
+.mnemoscope-factor-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text-muted);
+}
+.mnemoscope-bar {
+  background: rgba(95, 217, 209, 0.15);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+.mnemoscope-bar-fill {
+  background: linear-gradient(90deg, #5fd9d1, #a78bfa);
+  height: 100%;
+  border-radius: 4px;
+}
+.mnemoscope-top-notes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.mnemoscope-top-notes li {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: 0.8rem;
+}
+.mnemoscope-note-path {
+  font-family: var(--font-monospace);
+}
+.mnemoscope-note-meta {
+  color: var(--text-muted);
+}
