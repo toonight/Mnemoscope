@@ -1,12 +1,13 @@
 {
   "name": "@mnemoscope/mcp-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "mcpName": "io.github.toonight/mnemoscope",
   "description": "MCP server exposing Mnemoscope's predict_rot, get_tiered_read, and journal tools to any MCP-compatible client.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
-    "mnemoscope-mcp": "./dist/index.js"
+    "mnemoscope-mcp": "dist/index.js"
   },
   "files": [
     "dist",
