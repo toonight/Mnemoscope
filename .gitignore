@@ -23,3 +23,6 @@ research/.ruff_cache/
 # Local journal artifacts (test data)
 .mnemoscope/
 *.journal.jsonl
+
+# Demo vault state — keys/journal generated locally, never committed
+examples/demo-vault/.mnemoscope/

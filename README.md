@@ -22,6 +22,36 @@
 > [!NOTE]
 > The dominant 2025–2026 narrative on X — *"Markdown trips up the LLM at scale"* — is partially wrong. **Markdown** does not trip up the LLM. **Long-context loading** trips up the LLM ([Chroma, *Context Rot*, July 2025](https://www.trychroma.com/research/context-rot)). Mnemoscope is built on that distinction.
 
+## 👀 See it in action
+
+Real output, captured from the bundled [`examples/demo-vault`](./examples/demo-vault) — a 13-note synthetic vault designed so every rot factor moves. Reproduce it locally with `mnemoscope-init examples/demo-vault` (full transcript: [SAMPLE-OUTPUT.md](./examples/demo-vault/SAMPLE-OUTPUT.md)).
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**`predict_rot` — score, factors, top-risk notes**
+
+<img src="./docs/screenshots/predict-rot.png" alt="predict_rot card showing rot risk 52/100, dominant factor semanticRedundancy, factor breakdown bars, and the top 5 risk notes." />
+
+</td>
+<td width="50%" valign="top">
+
+**`mnemoscope-verify` — clean run vs. tamper detection**
+
+<img src="./docs/screenshots/verify-clean-and-tampered.png" alt="Two verify outputs side by side: a clean run with three valid entries and exit 0, and a tampered run with one signature-mismatch FAIL and exit 1." />
+
+</td>
+</tr>
+</table>
+
+<details>
+<summary>Full overview (click to expand) — gauge, factors, top risk notes, both verify states, tier counts, hash chain, all on one page</summary>
+
+<img src="./docs/screenshots/demo-overview.png" alt="Full demo page showing every Mnemoscope view at once." />
+
+</details>
+
 ## ✨ What is Mnemoscope?
 
 Mnemoscope is **not** another memory store. It is an **instrument** to:

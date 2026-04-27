@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mnemoscope — demo</title>
+  <style>
+    :root {
+      --bg: #070a1a;
+      --bg-elev: #0e1530;
+      --bg-card: #131c3a;
+      --border: rgba(95, 217, 209, 0.2);
+      --text: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent: #5fd9d1;
+      --accent-2: #a78bfa;
+      --good: #7cf09d;
+      --warn: #fbbf24;
+      --bad: #f87171;
+      --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      background: linear-gradient(180deg, #070a1a, #0e1530);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 24px;
+      max-width: 1200px;
+      padding: 32px;
+      margin: 0 auto;
+    }
+    h1 { margin: 0 0 8px 0; font-size: 28px; letter-spacing: -0.5px; }
+    h1 .grad {
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .lede { color: var(--text-muted); margin: 0 0 24px 0; }
+    section { margin-bottom: 32px; }
+    h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin: 0 0 12px 0; }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .toolbar .vault {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    button.rescan {
+      background: rgba(95, 217, 209, 0.1);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .gauge { display: flex; justify-content: center; margin: 8px 0 16px 0; }
+    .summary p { margin: 4px 0; font-size: 13px; color: var(--text-muted); }
+    .summary p strong { color: var(--text); font-family: var(--mono); }
+    .factors { list-style: none; padding: 0; margin: 0; }
+    .factors li {
+      display: grid;
+      grid-template-columns: 11rem 1fr 3rem;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 0;
+    }
+    .factor-name { font-family: var(--mono); font-size: 12px; }
+    .factor-value { font-variant-numeric: tabular-nums; text-align: right; color: var(--text-muted); font-family: var(--mono); font-size: 12px; }
+    .bar {
+      background: rgba(95, 217, 209, 0.12);
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      height: 100%;
+      border-radius: 4px;
+    }
+    .top-notes { list-style: none; padding: 0; margin: 0; }
+    .top-notes li {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .top-notes li:last-child { border-bottom: none; }
+    .note-path { font-family: var(--mono); color: var(--text); }
+    .note-meta { color: var(--text-muted); white-space: nowrap; }
+    .journal-row {
+      display: grid;
+      grid-template-columns: 18px 165px 60px 1fr;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 12px;
+      align-items: center;
+    }
+    .journal-row:last-child { border-bottom: none; }
+    .badge-ok  { color: var(--good); }
+    .badge-fail { color: var(--bad); }
+    .ts { color: var(--text-muted); }
+    .op { color: var(--accent-2); }
+    .reason { color: var(--bad); font-style: italic; font-size: 11px; display:block; }
+    .footer-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: rgba(124, 240, 157, 0.1);
+      border: 1px solid rgba(124, 240, 157, 0.3);
+      color: var(--good);
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .footer-pill.fail {
+      background: rgba(248, 113, 113, 0.1);
+      border-color: rgba(248, 113, 113, 0.3);
+      color: var(--bad);
+    }
+    .legend {
+      display: flex;
+      gap: 16px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    .legend .swatch {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    .legend .green { background: var(--good); }
+    .legend .amber { background: var(--warn); }
+    .legend .red { background: var(--bad); }
+    .header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header svg { flex-shrink: 0; }
+    .meta {
+      display: flex;
+      gap: 16px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+    code {
+      font-family: var(--mono);
+      background: rgba(95, 217, 209, 0.1);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--accent);
+    }
+    .tier-pill {
+      flex: 1;
+      text-align: center;
+      padding: 8px 6px;
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+    .tier-pill strong { display: block; font-size: 18px; margin-top: 2px; }
+    .chain-block {
+      background: #070a1a;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    .chain-block .lab { color: var(--accent); }
+    .chain-block .key { color: var(--accent-2); }
+    .chain-block .muted { color: var(--text-muted); }
+    .chain-arrow { text-align: center; color: var(--accent); margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <header class="header">
+      <svg width="56" height="56" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="lg" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0%" stop-color="#5fd9d1" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#5fd9d1" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect width="256" height="256" rx="48" fill="#0e1530"/>
+        <rect width="256" height="256" rx="48" fill="url(#lg)"/>
+        <g transform="translate(128, 128)" fill="none" stroke-linecap="round">
+          <circle r="100" stroke="#5fd9d1" stroke-opacity="0.12" stroke-width="1"/>
+          <circle r="76"  stroke="#5fd9d1" stroke-opacity="0.22" stroke-width="1" stroke-dasharray="2 6"/>
+          <circle r="54"  stroke="#5fd9d1" stroke-opacity="0.40" stroke-width="1.5"/>
+          <circle r="32"  stroke="#5fd9d1" stroke-opacity="0.65" stroke-width="2"/>
+          <circle r="14"  stroke="#a78bfa" stroke-opacity="0.9" stroke-width="2"/>
+          <circle r="4"   fill="#a78bfa"/>
+        </g>
+      </svg>
+      <div>
+        <h1><span class="grad">Mnemoscope</span> — demo vault</h1>
+        <p class="lede">A 13-note synthetic vault that exercises every factor of the rot scorer and the signed journal.</p>
+        <div class="meta">
+          <span>vault: <code>examples/demo-vault</code></span>
+          <span>13 notes</span>
+          <span>83,351 tokens</span>
+          <span>fingerprint: <code>6620dcca40afb739</code></span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <h2>predict_rot</h2>
+        <div class="card">
+          <div class="toolbar">
+            <span class="vault">examples/demo-vault</span>
+            <button class="rescan">Rescan</button>
+          </div>
+          <div class="gauge">
+            <svg viewBox="0 0 200 120" width="280" aria-label="rot risk score 52 of 100">
+              <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(95,217,209,0.18)" stroke-width="14" stroke-linecap="round"/>
+              <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#fbbf24" stroke-width="14" stroke-linecap="round" stroke-dasharray="130.52 251"/>
+              <text x="100" y="92" text-anchor="middle" font-size="44" font-weight="800" fill="#fbbf24">52</text>
+              <text x="100" y="112" text-anchor="middle" font-size="11" fill="#94a3b8">rot risk / 100</text>
+            </svg>
+          </div>
+          <div class="summary">
+            <p>Dominant factor: <strong>semanticRedundancy</strong></p>
+            <p>Baseline: <strong>v0-heuristic</strong></p>
+          </div>
+          <h3 style="font-size:13px;margin:16px 0 8px 0;color:var(--text)">Factor breakdown</h3>
+          <ul class="factors">
+            <li><span class="factor-name">tokenVolume</span><span class="bar"><span class="bar-fill" style="width:46%"></span></span><span class="factor-value">46</span></li>
+            <li><span class="factor-name">semanticRedundancy</span><span class="bar"><span class="bar-fill" style="width:99%"></span></span><span class="factor-value">99</span></li>
+            <li><span class="factor-name">distractorDensity</span><span class="bar"><span class="bar-fill" style="width:85%"></span></span><span class="factor-value">85</span></li>
+            <li><span class="factor-name">structuralCoherence</span><span class="bar"><span class="bar-fill" style="width:16%"></span></span><span class="factor-value">16</span></li>
+            <li><span class="factor-name">freshnessSpread</span><span class="bar"><span class="bar-fill" style="width:15%"></span></span><span class="factor-value">15</span></li>
+          </ul>
+          <div class="legend">
+            <span><span class="swatch green"></span>safe (&lt;30)</span>
+            <span><span class="swatch amber"></span>watch (30–60)</span>
+            <span><span class="swatch red"></span>act (&gt;60)</span>
+          </div>
+          <h3 style="font-size:13px;margin:20px 0 8px 0;color:var(--text)">Top 5 risk notes</h3>
+          <ul class="top-notes">
+            <li><span class="note-path">projects/big-project.md</span><span class="note-meta">82,754 tok · very large note</span></li>
+            <li><span class="note-path">archive/old-research.md</span><span class="note-meta">70 tok · stale (&gt;1y)</span></li>
+            <li><span class="note-path">archive/legacy.md</span><span class="note-meta">53 tok · stale (&gt;1y)</span></li>
+            <li><span class="note-path">README.md</span><span class="note-meta">224 tok · baseline</span></li>
+            <li><span class="note-path">notes/index.md</span><span class="note-meta">105 tok · baseline</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>mnemoscope-verify (clean)</h2>
+        <div class="card">
+          <div class="journal-row">
+            <span class="badge-ok">●</span>
+            <span class="ts">2026-04-27T01:47:27.968Z</span>
+            <span class="op">write</span>
+            <span><span class="note-path">examples/demo-vault/notes/note-1.md</span></span>
+          </div>
+          <div class="journal-row">
+            <span class="badge-ok">●</span>
+            <span class="ts">2026-04-27T01:47:27.998Z</span>
+            <span class="op">write</span>
+            <span><span class="note-path">examples/demo-vault/projects/big-project.md</span></span>
+          </div>
+          <div class="journal-row">
+            <span class="badge-ok">●</span>
+            <span class="ts">2026-04-27T01:47:28.029Z</span>
+            <span class="op">read</span>
+            <span><span class="note-path">examples/demo-vault/README.md</span></span>
+          </div>
+          <div style="margin-top:16px">
+            <span class="footer-pill">● 3 entries · 3 valid · 0 invalid · exit 0</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>mnemoscope-verify (tampered)</h2>
+        <div class="card">
+          <div class="journal-row">
+            <span class="badge-ok">●</span>
+            <span class="ts">2026-04-27T01:47:27.968Z</span>
+            <span class="op">write</span>
+            <span><span class="note-path">examples/demo-vault/notes/note-1.md</span></span>
+          </div>
+          <div class="journal-row">
+            <span class="badge-fail">✕</span>
+            <span class="ts">2026-04-27T01:47:27.998Z</span>
+            <span class="op">write</span>
+            <span><span class="note-path">examples/demo-vault/HACKED.md</span><span class="reason">signature mismatch</span></span>
+          </div>
+          <div class="journal-row">
+            <span class="badge-ok">●</span>
+            <span class="ts">2026-04-27T01:47:28.029Z</span>
+            <span class="op">read</span>
+            <span><span class="note-path">examples/demo-vault/README.md</span></span>
+          </div>
+          <div style="margin-top:16px">
+            <span class="footer-pill fail">● 3 entries · 2 valid · 1 invalid · exit 1</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside>
+      <h2>get_tiered_read</h2>
+      <div class="card">
+        <div class="meta" style="margin-bottom:12px">
+          <span>policy: working≤7d · episodic≤90d</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <span class="tier-pill" style="background:rgba(124,240,157,0.15);color:var(--good)">working<strong>11</strong></span>
+          <span class="tier-pill" style="background:rgba(95,217,209,0.15);color:var(--accent)">episodic<strong>0</strong></span>
+          <span class="tier-pill" style="background:rgba(167,139,250,0.15);color:var(--accent-2)">semantic<strong>2</strong></span>
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px 0">Semantic (older than 90d):</p>
+        <ul class="top-notes">
+          <li><span class="note-path">archive/legacy.md</span><span class="note-meta">53 tok · 773d</span></li>
+          <li><span class="note-path">archive/old-research.md</span><span class="note-meta">70 tok · 773d</span></li>
+        </ul>
+      </div>
+
+      <h2 style="margin-top:24px">Hash chain</h2>
+      <div class="card" style="font-family:var(--mono);font-size:11px">
+        <div style="margin-bottom:8px;color:var(--text-muted)">.mnemoscope/journal.jsonl</div>
+        <div class="chain-block">
+          <div class="lab">entry 1</div>
+          <div>op: <span class="key">write</span></div>
+          <div>prev: <span style="color:var(--good)">GENESIS</span></div>
+          <div>sig: <span class="muted">21e7ed601a81d048…</span></div>
+        </div>
+        <div class="chain-arrow">↓ chain</div>
+        <div class="chain-block">
+          <div class="lab">entry 2</div>
+          <div>op: <span class="key">write</span></div>
+          <div>prev: <span class="muted">21e7ed601a81d048…</span></div>
+          <div>sig: <span class="muted">2cbf900315df6908…</span></div>
+        </div>
+        <div class="chain-arrow">↓ chain</div>
+        <div class="chain-block">
+          <div class="lab">entry 3</div>
+          <div>op: <span class="key">read</span></div>
+          <div>prev: <span class="muted">2cbf900315df6908…</span></div>
+          <div>sig: <span class="muted">9e9a57343640573f…</span></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</body>
+</html>
