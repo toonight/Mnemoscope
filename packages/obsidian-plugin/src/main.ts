@@ -103,11 +103,12 @@ export default class MnemoscopePlugin extends Plugin {
       leaf = workspace.getRightLeaf(false);
       if (leaf) await leaf.setViewState({ type: VIEW_TYPE_MNEMOSCOPE, active: true });
     }
-    if (leaf) workspace.revealLeaf(leaf);
+    if (leaf) await workspace.revealLeaf(leaf);
   }
 
   async loadSettings(): Promise<void> {
-    this.settings = { ...DEFAULT_SETTINGS, ...(await this.loadData()) };
+    const stored = (await this.loadData()) as Partial<MnemoscopeSettings> | null;
+    this.settings = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
   }
 
   async saveSettings(): Promise<void> {
@@ -242,7 +243,7 @@ class OnboardingModal extends Modal {
     list.createEl("li", { text: `${this.opts.vaultPath}/.mnemoscope/` });
     list.createEl("li", { text: "keys/ed25519.key — per-vault private key, mode 0600" });
     list.createEl("li", { text: "keys/ed25519.pub — public half" });
-    list.createEl("li", { text: "journal.jsonl — signed append-only journal" });
+    list.createEl("li", { text: "Journal.jsonl — signed append-only journal" });
     list.createEl("li", { text: "README.txt — what this directory is" });
 
     contentEl.createEl("p", {
@@ -295,12 +296,12 @@ class MnemoscopeView extends ItemView {
     container.empty();
     container.addClass("mnemoscope-view");
 
-    const header = container.createEl("div", { cls: "mnemoscope-header" });
+    const header = container.createDiv({ cls: "mnemoscope-header" });
     header.createEl("h3", { text: "Mnemoscope" });
     const refreshBtn = header.createEl("button", { text: "Rescan" });
     refreshBtn.onclick = () => void this.refresh();
 
-    const status = container.createEl("div", { cls: "mnemoscope-status" });
+    const status = container.createDiv({ cls: "mnemoscope-status" });
     status.setText("Scanning vault…");
 
     let result: RotScore | null;
@@ -325,22 +326,21 @@ class MnemoscopeView extends ItemView {
 
     container.createEl("h4", { text: "Factor breakdown" });
     const factorList = container.createEl("ul", { cls: "mnemoscope-factors" });
-    for (const [name, rawValue] of Object.entries(result.factors)) {
-      const value = rawValue as number;
+    for (const [name, value] of Object.entries(result.factors)) {
       const li = factorList.createEl("li");
-      li.createEl("span", { text: name, cls: "mnemoscope-factor-name" });
+      li.createSpan({ text: name, cls: "mnemoscope-factor-name" });
       const bar = li.createDiv({ cls: "mnemoscope-bar" });
       const fill = bar.createDiv({ cls: "mnemoscope-bar-fill" });
       fill.style.width = `${String(Math.round(value))}%`;
-      li.createEl("span", { text: `${String(Math.round(value))}`, cls: "mnemoscope-factor-value" });
+      li.createSpan({ text: `${String(Math.round(value))}`, cls: "mnemoscope-factor-value" });
     }
 
     container.createEl("h4", { text: "Top risk notes" });
     const list = container.createEl("ul", { cls: "mnemoscope-top-notes" });
     for (const note of result.topRiskNotes) {
       const li = list.createEl("li");
-      li.createEl("span", { text: note.relPath, cls: "mnemoscope-note-path" });
-      li.createEl("span", {
+      li.createSpan({ text: note.relPath, cls: "mnemoscope-note-path" });
+      li.createSpan({
         text: ` · ${note.approxTokens.toLocaleString()} tok · ${note.reason}`,
         cls: "mnemoscope-note-meta",
       });
@@ -421,14 +421,14 @@ class MnemoscopeSettingTab extends PluginSettingTab {
 
 function buildGaugeSvg(score: number): SVGSVGElement {
   const ns = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(ns, "svg");
+  const svg = activeDocument.createElementNS(ns, "svg");
   svg.setAttribute("viewBox", "0 0 200 120");
   svg.setAttribute("width", "100%");
   svg.setAttribute("aria-label", `rot risk score ${score} of 100`);
   svg.setAttribute("role", "img");
 
   const trackPath = "M 20 100 A 80 80 0 0 1 180 100";
-  const track = document.createElementNS(ns, "path");
+  const track = activeDocument.createElementNS(ns, "path");
   track.setAttribute("d", trackPath);
   track.setAttribute("fill", "none");
   track.setAttribute("stroke", "rgba(95,217,209,0.18)");
@@ -436,7 +436,7 @@ function buildGaugeSvg(score: number): SVGSVGElement {
   track.setAttribute("stroke-linecap", "round");
   svg.appendChild(track);
 
-  const fill = document.createElementNS(ns, "path");
+  const fill = activeDocument.createElementNS(ns, "path");
   fill.setAttribute("d", trackPath);
   fill.setAttribute("fill", "none");
   fill.setAttribute("stroke", colorForScore(score));
@@ -447,7 +447,7 @@ function buildGaugeSvg(score: number): SVGSVGElement {
   fill.setAttribute("stroke-dasharray", `${filledLen} ${totalLen}`);
   svg.appendChild(fill);
 
-  const text = document.createElementNS(ns, "text");
+  const text = activeDocument.createElementNS(ns, "text");
   text.setAttribute("x", "100");
   text.setAttribute("y", "92");
   text.setAttribute("text-anchor", "middle");
@@ -457,13 +457,13 @@ function buildGaugeSvg(score: number): SVGSVGElement {
   text.textContent = String(score);
   svg.appendChild(text);
 
-  const label = document.createElementNS(ns, "text");
+  const label = activeDocument.createElementNS(ns, "text");
   label.setAttribute("x", "100");
   label.setAttribute("y", "112");
   label.setAttribute("text-anchor", "middle");
   label.setAttribute("font-size", "11");
   label.setAttribute("fill", "var(--text-muted)");
-  label.textContent = "rot risk out of 100";
+  label.textContent = "Rot risk out of 100";
   svg.appendChild(label);
 
   return svg;

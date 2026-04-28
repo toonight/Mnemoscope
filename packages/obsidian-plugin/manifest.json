@@ -2,7 +2,7 @@
   "id": "mnemoscope",
   "name": "Mnemoscope",
   "version": "0.1.0",
-  "minAppVersion": "1.5.0",
+  "minAppVersion": "1.7.2",
   "description": "See how your agent remembers (and forgets). Predictive context-rot gauge, Ed25519-signed journal of agent writes, working/episodic/semantic tiering. 100% local.",
   "author": "Mnemoscope contributors",
   "authorUrl": "https://github.com/toonight",
