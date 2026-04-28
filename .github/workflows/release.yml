@@ -29,15 +29,39 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm audit --audit-level=moderate
-      # Publishing uses npm OIDC trusted publishing (no NPM_TOKEN). The trusted
-      # publisher is configured on npmjs.com for the @mnemoscope scope:
-      # org -> Trusted Publishers -> GitHub Actions -> toonight/Mnemoscope, workflow release.yml.
+      # Publishing uses npm OIDC trusted publishing (no NPM_TOKEN). A trusted
+      # publisher is registered per-package on npmjs.com:
+      #   org -> Trusted Publishers -> GitHub Actions -> toonight/Mnemoscope, workflow release.yml.
+      # Each publish step is idempotent: if the version is already on the
+      # registry (e.g. a previous run died mid-publish), the step skips
+      # cleanly instead of failing with E409. This keeps `gh run rerun`
+      # safe across partial failures.
       - name: Publish @mnemoscope/core
-        run: npm publish --workspace @mnemoscope/core --access public --provenance
+        env:
+          PKG_VERSION: ${{ github.ref_name }}
+        run: |
+          v="$(node -p "require('./packages/core/package.json').version")"
+          if npm view "@mnemoscope/core@${v}" version >/dev/null 2>&1; then
+            echo "@mnemoscope/core@${v} already on the registry, skipping."
+          else
+            npm publish --workspace @mnemoscope/core --access public --provenance
+          fi
       - name: Publish @mnemoscope/mcp-server
-        run: npm publish --workspace @mnemoscope/mcp-server --access public --provenance
+        run: |
+          v="$(node -p "require('./packages/mcp-server/package.json').version")"
+          if npm view "@mnemoscope/mcp-server@${v}" version >/dev/null 2>&1; then
+            echo "@mnemoscope/mcp-server@${v} already on the registry, skipping."
+          else
+            npm publish --workspace @mnemoscope/mcp-server --access public --provenance
+          fi
       - name: Publish @mnemoscope/cli
-        run: npm publish --workspace @mnemoscope/cli --access public --provenance
+        run: |
+          v="$(node -p "require('./packages/cli/package.json').version")"
+          if npm view "@mnemoscope/cli@${v}" version >/dev/null 2>&1; then
+            echo "@mnemoscope/cli@${v} already on the registry, skipping."
+          else
+            npm publish --workspace @mnemoscope/cli --access public --provenance
+          fi
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
