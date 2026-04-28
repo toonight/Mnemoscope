@@ -30,3 +30,6 @@ examples/demo-vault/.mnemoscope/
 # Replication runner outputs (regenerated on each run)
 research/replication/results-*.json
 research/replication/REPORT-*.md
+
+# Per-author launch drafts (not part of the public repo)
+.posts/
