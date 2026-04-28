@@ -3,6 +3,15 @@
   "version": "0.2.0",
   "description": "Mnemoscope command-line entrypoints, including the Claude Code PostToolUse hook that auto-journals Write/Edit/MultiEdit operations.",
   "license": "Apache-2.0",
+  "homepage": "https://github.com/toonight/Mnemoscope#readme",
+  "bugs": {
+    "url": "https://github.com/toonight/Mnemoscope/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toonight/Mnemoscope.git",
+    "directory": "packages/cli"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "bin": {

@@ -3,6 +3,15 @@
   "version": "0.2.0",
   "description": "Core memory observability primitives for Mnemoscope: rot scoring, tiering, signed journal.",
   "license": "Apache-2.0",
+  "homepage": "https://github.com/toonight/Mnemoscope#readme",
+  "bugs": {
+    "url": "https://github.com/toonight/Mnemoscope/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toonight/Mnemoscope.git",
+    "directory": "packages/core"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

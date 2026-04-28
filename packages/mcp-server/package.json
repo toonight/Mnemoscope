@@ -4,6 +4,15 @@
   "mcpName": "io.github.toonight/mnemoscope",
   "description": "MCP server exposing Mnemoscope's predict_rot, get_tiered_read, and journal tools to any MCP-compatible client.",
   "license": "Apache-2.0",
+  "homepage": "https://github.com/toonight/Mnemoscope#readme",
+  "bugs": {
+    "url": "https://github.com/toonight/Mnemoscope/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toonight/Mnemoscope.git",
+    "directory": "packages/mcp-server"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
