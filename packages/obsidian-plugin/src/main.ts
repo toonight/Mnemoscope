@@ -244,7 +244,7 @@ class OnboardingModal extends Modal {
     list.createEl("li", { text: "keys/ed25519.key — per-vault private key, mode 0600" });
     list.createEl("li", { text: "keys/ed25519.pub — public half" });
     list.createEl("li", { text: "Journal.jsonl — signed append-only journal" });
-    list.createEl("li", { text: "README.txt — what this directory is" });
+    list.createEl("li", { text: "Readme — describes the directory" });
 
     contentEl.createEl("p", {
       text: "Nothing leaves your machine. You can disable journaling for this vault "
