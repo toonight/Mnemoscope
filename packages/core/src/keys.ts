@@ -61,9 +61,9 @@ export async function encryptPrivateKeyPem(pem: string, passphrase: string, comm
 }
 
 export async function decryptPrivateKeyPem(envelope: EncryptedKeyEnvelope, passphrase: string): Promise<string> {
-  if (envelope.version !== 1) throw new Error(`unsupported envelope version ${envelope.version}`);
-  if (envelope.kdf !== "scrypt") throw new Error(`unsupported KDF ${envelope.kdf}`);
-  if (envelope.cipher !== "aes-256-gcm") throw new Error(`unsupported cipher ${envelope.cipher}`);
+  if (envelope.version !== 1) throw new Error(`unsupported envelope version ${String(envelope.version)}`);
+  if (envelope.kdf !== "scrypt") throw new Error(`unsupported KDF ${String(envelope.kdf)}`);
+  if (envelope.cipher !== "aes-256-gcm") throw new Error(`unsupported cipher ${String(envelope.cipher)}`);
   const salt = Buffer.from(envelope.salt, "base64");
   const iv = Buffer.from(envelope.iv, "base64");
   const ciphertext = Buffer.from(envelope.ciphertext, "base64");

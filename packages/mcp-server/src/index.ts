@@ -19,7 +19,7 @@ const server = new Server(
   { capabilities: { tools: {} } },
 );
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
+server.setRequestHandler(ListToolsRequestSchema, () => Promise.resolve({
   tools: [
     {
       name: "predict_rot",
@@ -154,18 +154,21 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       const op = stringArg(args, "op") as "read" | "write" | "create" | "delete";
       const target = stringArg(args, "target_path");
       const journal = await Journal.open(journalPathFor(vaultPath), sessionId);
+      const contentBefore = args["content_before"];
+      const contentAfter = args["content_after"];
       const entry = await journal.record(
         op,
         target,
-        typeof args["content_before"] === "string" ? (args["content_before"] as string) : undefined,
-        typeof args["content_after"] === "string" ? (args["content_after"] as string) : undefined,
+        typeof contentBefore === "string" ? contentBefore : undefined,
+        typeof contentAfter === "string" ? contentAfter : undefined,
       );
       return { content: [{ type: "text", text: JSON.stringify(entry, null, 2) }] };
     }
 
     case "read_journal": {
       const vaultPath = stringArg(args, "vault_path");
-      const sessionId = typeof args["session_id"] === "string" ? (args["session_id"] as string) : null;
+      const sessionIdArg = args["session_id"];
+      const sessionId = typeof sessionIdArg === "string" ? sessionIdArg : null;
       const journal = await Journal.open(journalPathFor(vaultPath), sessionId ?? randomUUID());
       const entries = await journal.readAll();
       const filtered = sessionId ? entries.filter((e) => e.sessionId === sessionId) : entries;

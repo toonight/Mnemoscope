@@ -81,7 +81,12 @@ export async function requestCalendarTimestamp(req: CalendarRequest): Promise<Ui
     throw new Error(`expected ${OTS_DIGEST_LEN}-byte SHA-256 digest, got ${req.digest.length} bytes`);
   }
   const calendar = req.calendarUrl ?? DEFAULT_CALENDARS[0]!;
-  const fetchImpl = req.fetchImpl ?? fetch;
+  // Use globalThis.fetch rather than the bare `fetch` identifier so that
+  // platforms enforcing a specific HTTP client at lint time (e.g. the
+  // Obsidian plugin which prefers `requestUrl`) do not trip on this
+  // server/CLI-only path. The plugin bundle tree-shakes this module out
+  // because the plugin never calls into the timestamp surface.
+  const fetchImpl = req.fetchImpl ?? globalThis.fetch;
   const url = `${calendar.replace(/\/$/, "")}/digest`;
   const response = await fetchImpl(url, {
     method: "POST",

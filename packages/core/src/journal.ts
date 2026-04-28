@@ -235,7 +235,21 @@ function signCanonical(unsigned: unknown, privateKey: KeyObject): string {
 }
 
 function verifyCanonical(entry: JournalEntry, publicKey: KeyObject): boolean {
-  const { sig, keyFingerprint: _kf, ...rest } = entry;
+  // Strip sig + keyFingerprint from the canonicalization input by listing the
+  // fields we *do* sign. Keeping this explicit avoids destructuring an unused
+  // identifier just to drop it.
+  const rest: Record<string, unknown> = {
+    ts: entry.ts,
+    sessionId: entry.sessionId,
+    op: entry.op,
+    path: entry.path,
+    prevHash: entry.prevHash,
+  };
+  if (entry.bytesBefore !== undefined) rest["bytesBefore"] = entry.bytesBefore;
+  if (entry.bytesAfter !== undefined) rest["bytesAfter"] = entry.bytesAfter;
+  if (entry.contentHashAfter !== undefined) rest["contentHashAfter"] = entry.contentHashAfter;
+  if (entry.diffHash !== undefined) rest["diffHash"] = entry.diffHash;
+  const { sig } = entry;
   const canonical = Buffer.from(canonicalize(rest), "utf8");
   try {
     return verify(null, canonical, publicKey, Buffer.from(sig, "base64url"));

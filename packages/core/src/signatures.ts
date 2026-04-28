@@ -26,10 +26,25 @@ export type NoteSignature = {
 };
 
 const TEXT_EXTENSIONS = new Set([".md", ".markdown", ".mdx"]);
-const IGNORED_DIRS = new Set([".obsidian", ".git", "node_modules", ".trash"]);
+/**
+ * Default directories to skip while walking a vault. Obsidian's
+ * configuration folder is `.obsidian` by default but **can be renamed**
+ * by the user (the plugin reads it via `Vault#configDir`); callers that
+ * know the actual config dir should pass it through `opts.ignoredDirs`.
+ */
+const DEFAULT_IGNORED_DIRS = [".obsidian", ".git", "node_modules", ".trash"];
 const APPROX_CHARS_PER_TOKEN = 4;
 
-export async function extractSignature(rootPath: string): Promise<VaultSignature> {
+export type ExtractSignatureOptions = {
+  /** Names of directories to skip during the walk. Replaces the default set entirely. */
+  ignoredDirs?: readonly string[];
+};
+
+export async function extractSignature(
+  rootPath: string,
+  opts: ExtractSignatureOptions = {},
+): Promise<VaultSignature> {
+  const ignored = new Set(opts.ignoredDirs ?? DEFAULT_IGNORED_DIRS);
   const notes: NoteSignature[] = [];
   const now = Date.now();
 
@@ -37,7 +52,7 @@ export async function extractSignature(rootPath: string): Promise<VaultSignature
     const entries = await readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory()) {
-        if (IGNORED_DIRS.has(entry.name)) continue;
+        if (ignored.has(entry.name)) continue;
         await walk(join(dir, entry.name));
         continue;
       }

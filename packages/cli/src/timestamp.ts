@@ -15,7 +15,7 @@
  * and to verify them on chain.
  */
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import {
   Journal,

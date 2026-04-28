@@ -116,17 +116,19 @@ function resolveVaultRoot(filePath: string): string | null {
   const fromEnv = process.env["MNEMOSCOPE_VAULT_PATH"];
   if (fromEnv && fromEnv.length > 0) return resolve(fromEnv);
 
+  // Walk up until we find a `.mnemoscope/` directory or hit the filesystem
+  // root. The condition compares against `dirname(current)` so we stop once
+  // walking up no longer changes the path (POSIX `/`, Windows `C:\`).
   let current = dirname(resolve(filePath));
-  // Walk up until we find a `.mnemoscope/` directory or hit the filesystem root.
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
+  let parent = dirname(current);
+  while (current !== parent) {
     if (existsSync(join(current, ".mnemoscope"))) return current;
-    const parent = dirname(current);
-    if (parent === current) return null;
-    current = parent;
-    // Belt-and-braces: bail at the user's home or any path with no separator left.
+    // Belt-and-braces: bail at any path with no separator left.
     if (!current.includes(sep)) return null;
+    current = parent;
+    parent = dirname(current);
   }
+  return null;
 }
 
 function log(msg: string): void {

@@ -5,9 +5,9 @@ import {
   Plugin,
   PluginSettingTab,
   Setting,
-  WorkspaceLeaf,
   type App,
   type FileSystemAdapter,
+  type WorkspaceLeaf,
 } from "obsidian";
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -58,23 +58,23 @@ export default class MnemoscopePlugin extends Plugin {
 
     this.registerView(VIEW_TYPE_MNEMOSCOPE, (leaf) => new MnemoscopeView(leaf, this));
 
-    this.addRibbonIcon("eye", "Mnemoscope: open rot scope", () => this.activateView());
+    this.addRibbonIcon("eye", "Open rot scope", () => void this.activateView());
 
     this.addCommand({
       id: "open-rot-scope",
       name: "Open rot scope",
-      callback: () => this.activateView(),
+      callback: () => void this.activateView(),
     });
 
     this.addCommand({
       id: "scan-vault-rot",
-      name: "Scan vault rot (notice only)",
-      callback: () => this.scanAndNotify(),
+      name: "Scan vault rot",
+      callback: () => void this.scanAndNotify(),
     });
 
     this.addCommand({
       id: "initialize-vault",
-      name: "Initialize this vault for Mnemoscope",
+      name: "Initialize vault",
       callback: () => void this.initializeVault({ silent: false }),
     });
 
@@ -82,12 +82,15 @@ export default class MnemoscopePlugin extends Plugin {
 
     this.app.workspace.onLayoutReady(() => {
       if (this.settings.autoScanOnOpen) void this.activateView();
-      void this.maybeOfferOnboarding();
+      this.maybeOfferOnboarding();
     });
   }
 
+  // Per Obsidian guidelines, leaves are NOT detached in onunload — Obsidian
+  // restores their position itself, and detaching here would reset the
+  // user's chosen layout next time the plugin loads.
   override onunload(): void {
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_MNEMOSCOPE);
+    // intentionally empty
   }
 
   async activateView(): Promise<void> {
@@ -111,34 +114,44 @@ export default class MnemoscopePlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
+  /**
+   * Walk the vault, skipping Obsidian's actual configuration folder (which
+   * the user can rename via `Vault#configDir`) plus the usual non-content
+   * directories. Then run the v0 rot heuristic.
+   */
+  private signatureOptions(): { ignoredDirs: readonly string[] } {
+    const configDir = this.app.vault.configDir;
+    return { ignoredDirs: [configDir, ".git", "node_modules", ".trash"] };
+  }
+
   async scan(): Promise<RotScore | null> {
     const vaultPath = this.resolveVaultPath();
     if (!vaultPath) return null;
-    const sig = await extractSignature(vaultPath);
+    const sig = await extractSignature(vaultPath, this.signatureOptions());
     return computeRotScore(sig);
   }
 
   async scanAndNotify(): Promise<void> {
     const vaultPath = this.resolveVaultPath();
     if (!vaultPath) {
-      new Notice("Mnemoscope: this vault is not on the local filesystem.");
+      new Notice("This vault is not on the local filesystem.");
       return;
     }
-    new Notice("Mnemoscope: scanning…");
+    new Notice("Scanning vault…");
     try {
-      const sig = await extractSignature(vaultPath);
+      const sig = await extractSignature(vaultPath, this.signatureOptions());
       const result = computeRotScore(sig);
       new Notice(
         [
-          `Mnemoscope rot risk: ${result.score}/100`,
+          `Rot risk: ${String(result.score)}/100`,
           `Dominant factor: ${result.dominantFactor}`,
-          `Notes: ${sig.noteCount} (~${sig.approxTokens.toLocaleString()} tokens)`,
+          `Notes: ${String(sig.noteCount)} (~${sig.approxTokens.toLocaleString()} tokens)`,
         ].join("\n"),
         10_000,
       );
     } catch (err) {
       console.error("[mnemoscope] scan failed", err);
-      new Notice(`Mnemoscope: scan failed (${(err as Error).message})`);
+      new Notice(`Scan failed (${(err as Error).message})`);
     }
   }
 
@@ -161,7 +174,7 @@ export default class MnemoscopePlugin extends Plugin {
    * `.mnemoscope/`, generate a per-vault Ed25519 keypair via
    * `Journal.open`, and write a small README.
    */
-  async maybeOfferOnboarding(): Promise<void> {
+  maybeOfferOnboarding(): void {
     if (this.settings.onboardingDismissed) return;
     if (this.isInitialized()) return;
     const vaultPath = this.resolveVaultPath();
@@ -170,9 +183,9 @@ export default class MnemoscopePlugin extends Plugin {
     new OnboardingModal(this.app, {
       vaultPath,
       onAccept: () => void this.initializeVault({ silent: false }),
-      onDismiss: async () => {
+      onDismiss: () => {
         this.settings.onboardingDismissed = true;
-        await this.saveSettings();
+        void this.saveSettings();
       },
     }).open();
   }
@@ -196,10 +209,10 @@ export default class MnemoscopePlugin extends Plugin {
       }
       this.settings.onboardingDismissed = true;
       await this.saveSettings();
-      new Notice(`Mnemoscope initialized. Public key fingerprint: ${fingerprint}`, 8_000);
+      new Notice(`Initialized. Public key fingerprint: ${fingerprint}`, 8_000);
     } catch (err) {
       console.error("[mnemoscope] initialize failed", err);
-      new Notice(`Mnemoscope: initialize failed (${(err as Error).message})`);
+      new Notice(`Initialize failed (${(err as Error).message})`);
     }
   }
 }
@@ -207,7 +220,7 @@ export default class MnemoscopePlugin extends Plugin {
 interface OnboardingModalOpts {
   vaultPath: string;
   onAccept: () => void;
-  onDismiss: () => void | Promise<void>;
+  onDismiss: () => void;
 }
 
 class OnboardingModal extends Modal {
@@ -218,23 +231,23 @@ class OnboardingModal extends Modal {
   override onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h2", { text: "Set up Mnemoscope for this vault?" });
+    contentEl.createEl("h2", { text: "Set up vault for journaling" });
 
     contentEl.createEl("p", {
-      text: "Mnemoscope is an open-source observability layer for LLM agent memory. "
+      text: "This plugin keeps an observability layer for LLM agent memory. "
         + "Initializing creates a small private directory inside this vault:",
     });
 
     const list = contentEl.createEl("ul");
     list.createEl("li", { text: `${this.opts.vaultPath}/.mnemoscope/` });
-    list.createEl("li", { text: "  ↳ keys/ed25519.key   (per-vault private key, mode 0600)" });
-    list.createEl("li", { text: "  ↳ keys/ed25519.pub   (public half)" });
-    list.createEl("li", { text: "  ↳ journal.jsonl      (signed append-only journal)" });
-    list.createEl("li", { text: "  ↳ README.txt         (what this directory is)" });
+    list.createEl("li", { text: "keys/ed25519.key — per-vault private key, mode 0600" });
+    list.createEl("li", { text: "keys/ed25519.pub — public half" });
+    list.createEl("li", { text: "journal.jsonl — signed append-only journal" });
+    list.createEl("li", { text: "README.txt — what this directory is" });
 
     contentEl.createEl("p", {
-      text: "Nothing leaves your machine. You can disable Mnemoscope for this vault any "
-        + "time by deleting that directory.",
+      text: "Nothing leaves your machine. You can disable journaling for this vault "
+        + "at any time by deleting that directory.",
     });
 
     const buttons = contentEl.createDiv({ cls: "modal-button-container" });
@@ -246,7 +259,7 @@ class OnboardingModal extends Modal {
     };
     const dismissBtn = buttons.createEl("button", { text: "Not now" });
     dismissBtn.onclick = () => {
-      void this.opts.onDismiss();
+      this.opts.onDismiss();
       this.close();
     };
   }
@@ -312,13 +325,14 @@ class MnemoscopeView extends ItemView {
 
     container.createEl("h4", { text: "Factor breakdown" });
     const factorList = container.createEl("ul", { cls: "mnemoscope-factors" });
-    for (const [name, value] of Object.entries(result.factors) as Array<[string, number]>) {
+    for (const [name, rawValue] of Object.entries(result.factors)) {
+      const value = rawValue as number;
       const li = factorList.createEl("li");
       li.createEl("span", { text: name, cls: "mnemoscope-factor-name" });
       const bar = li.createDiv({ cls: "mnemoscope-bar" });
       const fill = bar.createDiv({ cls: "mnemoscope-bar-fill" });
-      fill.style.width = `${Math.round(value)}%`;
-      li.createEl("span", { text: `${Math.round(value)}`, cls: "mnemoscope-factor-value" });
+      fill.style.width = `${String(Math.round(value))}%`;
+      li.createEl("span", { text: `${String(Math.round(value))}`, cls: "mnemoscope-factor-value" });
     }
 
     container.createEl("h4", { text: "Top risk notes" });
@@ -395,7 +409,7 @@ class MnemoscopeSettingTab extends PluginSettingTab {
           .setCta()
           .onClick(async () => {
             if (initialized) {
-              new Notice("Mnemoscope: this vault is already initialized.");
+              new Notice("This vault is already initialized.");
             } else {
               await this.plugin.initializeVault({ silent: false });
             }
@@ -449,7 +463,7 @@ function buildGaugeSvg(score: number): SVGSVGElement {
   label.setAttribute("text-anchor", "middle");
   label.setAttribute("font-size", "11");
   label.setAttribute("fill", "var(--text-muted)");
-  label.textContent = "rot risk / 100";
+  label.textContent = "rot risk out of 100";
   svg.appendChild(label);
 
   return svg;
