@@ -3,7 +3,7 @@
   "name": "mnemoscope",
   "displayName": "Mnemoscope",
   "description": "Predictive context-rot scoring, Ed25519-signed local write journal, and hierarchical tiering for LLM agents on Markdown vaults. 100% local; ships an MCP server and an Obsidian plugin.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "homepage": "https://github.com/toonight/Mnemoscope",
   "repository": "https://github.com/toonight/Mnemoscope",

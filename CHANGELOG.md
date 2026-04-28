@@ -4,6 +4,12 @@ All notable changes to Mnemoscope are documented here. The project follows [Keep
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-04-28
+
+Coordinated release that consolidates everything shipped between 0.1.0 and today: predictive context-rot tooling polish, the full distribution push (npm OIDC, MCP Registry, Obsidian community-plugin submission), and the lint/test/CI hardening that came out of the Obsidian review cycle.
+
+`@mnemoscope/obsidian-plugin` stays at `0.1.0` because the Obsidian community-plugin PR (#12354) is currently in review against that release tag. The npm packages — `@mnemoscope/core`, `@mnemoscope/mcp-server`, `@mnemoscope/cli` — all move to 0.2.0.
+
 ### Added
 
 - **Public npm distribution** — `@mnemoscope/core@0.1.0`, `@mnemoscope/mcp-server@0.1.1` and `@mnemoscope/cli@0.1.0` are live on the npm registry under the `@mnemoscope` org. The bootstrap publish (manual, for the first version of each package) was followed by registering [npm OIDC Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) for the GitHub Actions workflow `release.yml` on every package, so subsequent releases authenticate via short-lived OIDC tokens rather than a rotating `NPM_TOKEN` secret. Provenance attestations are emitted automatically.
@@ -34,6 +40,8 @@ All notable changes to Mnemoscope are documented here. The project follows [Keep
 ### Fixed
 
 - `packages/cli/package.json` — committed the `bin` paths in their npm-canonical form (`dist/init.js` etc., no leading `./`). npm 11 silently strips the prefix on publish, so the working tree previously drifted from what the registry actually serves.
+- ObsidianReviewBot findings on PR #12354 — fourteen required + two optional issues against the 2a346eb snapshot. Fixes include: dropping the plugin name from command names, applying sentence case across UI strings, removing `detachLeavesOfType` from `onunload`, switching `WorkspaceLeaf` and `RotScore` to `import type`, dropping the `async` from a function with no `await`, replacing `createEl("div"|"span", …)` with `createDiv|createSpan(…)`, switching to `activeDocument.createElementNS` for popout-window compatibility, awaiting `workspace.revealLeaf`, typing `loadData()` as `Partial<Settings> | null`, replacing the hardcoded `.obsidian` ignore with `Vault#configDir`, switching `core/timestamp.ts` from `fetch` to `globalThis.fetch`, wrapping `String(envelope.version)` for `never`-typed template literals, refactoring `verifyCanonical` to drop the unused destructure, dropping the `eslint-disable no-constant-condition` in `record-hook.ts`, and removing an unused `readFile` import.
+- `manifest.json#minAppVersion` raised from `1.5.0` to `1.7.2` because `Workspace.revealLeaf` is gated on Obsidian ≥ 1.7.2 (the eslint plugin's `obsidianmd/no-unsupported-api` rule flagged it).
 
 ## [0.1.0] — 2026-04-26
 
@@ -71,6 +79,7 @@ First public, *production-grade* release. The previous tag was a scaffold; this 
 
 Initial scaffold pushed to GitHub. Monorepo layout, Apache-2.0, `core` + `mcp-server` + `obsidian-plugin` packages, GitHub Actions CI, banner + logo SVG. No real signing, no auto-journal hook, no integration tests, no research sub-project.
 
-[Unreleased]: https://github.com/toonight/Mnemoscope/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/toonight/Mnemoscope/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/toonight/Mnemoscope/releases/tag/v0.2.0
 [0.1.0]: https://github.com/toonight/Mnemoscope/releases/tag/v0.1.0
 [0.0.1]: https://github.com/toonight/Mnemoscope/releases/tag/v0.0.1

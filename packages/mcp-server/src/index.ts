@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 
 const SERVER_NAME = "mnemoscope";
-const SERVER_VERSION = "0.1.0";
+const SERVER_VERSION = "0.2.0";
 
 const server = new Server(
   { name: SERVER_NAME, version: SERVER_VERSION },

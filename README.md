@@ -7,7 +7,7 @@
   <a href="https://nodejs.org"><img alt="Node 22+" src="https://img.shields.io/badge/node-%E2%89%A522-339933?style=flat-square&logo=node.js&logoColor=white"></a>
   <a href="https://modelcontextprotocol.io"><img alt="MCP" src="https://img.shields.io/badge/MCP-server%20+%20Obsidian-5fd9d1?style=flat-square"></a>
   <img alt="100% local" src="https://img.shields.io/badge/runs-100%25%20local-a78bfa?style=flat-square">
-  <img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-fbbf24?style=flat-square">
+  <img alt="Version 0.2.0" src="https://img.shields.io/badge/version-0.2.0-fbbf24?style=flat-square">
   <img alt="Tests: 61 passing" src="https://img.shields.io/badge/tests-61%20passing-2ea043?style=flat-square">
   <img alt="0 vulnerabilities" src="https://img.shields.io/badge/vulnerabilities-0-2ea043?style=flat-square">
   <a href="https://github.com/toonight/Mnemoscope/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/toonight/Mnemoscope/actions/workflows/ci.yml/badge.svg"></a>
