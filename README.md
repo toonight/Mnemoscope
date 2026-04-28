@@ -330,7 +330,7 @@ Mnemoscope is meant to be a tool **and** a contribution to the public empirical 
 | Research thread | Status | Why it matters |
 |---|---|---|
 | **MarkdownMemBench v0.1** | 🟢 schema + sample dataset + harness shipping | Today's benchmarks ([LongMemEval](https://arxiv.org/pdf/2410.10813), [LoCoMo](https://snap-research.github.io/locomo/)) are conversational and English-only. There is no public bench for vault-native, MD-native agent memory. |
-| **Predictive Context Rot classifier** | 🟡 sklearn → ONNX pipeline working on synthetic baseline | Every existing benchmark measures degradation *after* injection. We aim to predict it *before*, calibrated against LongMemEval / LoCoMo / MarkdownMemBench with R² ≥ 0.6. |
+| **Predictive Context Rot classifier** | 🟡 sklearn → ONNX pipeline ships; multi-family comparison (ridge / rf / gbr) on a 1 000-row principled synthetic baseline (R² = 0.85 on Ridge, audited via metadata JSON); awaits real `(signature, observed_loss)` measurements to displace the synthetic label | Every existing benchmark measures degradation *after* injection. We aim to predict it *before*, calibrated against LongMemEval / LoCoMo / MarkdownMemBench with R² ≥ 0.6 on real measurements. |
 | **Replication of Chroma's *"structured > shuffled is worse"*** | 🟢 runner + offline & online grading shipping; real-corpus runs pending vault contributions | Chroma showed coherent haystacks underperform shuffled ones on NIAH. Nobody has replicated or refuted this on real Obsidian vaults yet. The runner ([`research/replication/`](./research/replication)) needs only an API key and a vault path. |
 
 Each thread lives in [`research/`](./research) and will produce a preprint alongside the code.

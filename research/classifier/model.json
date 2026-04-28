@@ -1,0 +1,29 @@
+{
+  "features": [
+    "token_volume",
+    "semantic_redundancy",
+    "distractor_density",
+    "structural_coherence",
+    "freshness_spread"
+  ],
+  "selected_model": "ridge",
+  "metrics_per_family": {
+    "ridge": {
+      "r2": 0.8515058159828186,
+      "mae": 0.04226146638393402
+    },
+    "rf": {
+      "r2": 0.768818616820913,
+      "mae": 0.05184021839242574
+    },
+    "gbr": {
+      "r2": 0.8041925196568156,
+      "mae": 0.04846685127182775
+    }
+  },
+  "rows_train": 800,
+  "rows_test": 200,
+  "onnx_round_trip_max_delta": 1.1920928955078125e-07,
+  "data_source": "classifier/synthetic-large.csv",
+  "seed": 42
+}
