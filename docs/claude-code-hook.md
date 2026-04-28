@@ -67,4 +67,5 @@ Exits `0` if every signature is valid, `1` if any entry has been tampered with o
 - **The hook never blocks the tool call.** Any internal error (missing payload field, unreadable file, etc.) is logged to stderr and the process exits `0`.
 - **The hook only reads, never writes to the vault** beyond appending to `.mnemoscope/journal.jsonl` and creating the keypair on first use.
 - **The Ed25519 private key is stored at `<vault>/.mnemoscope/keys/ed25519.key` with mode `0600`.** Treat the file as you would any other private key — back it up, do not commit it.
-- **Per-entry signatures detect tampering with any field of any entry.** They do **not** detect entry deletion (truncation). A future version will chain entries to make truncation detectable.
+- **Per-entry Ed25519 signatures detect any field-level tampering.** Each entry's `prevHash` is the SHA-256 of the previous entry's signature, so deletion or reordering of entries is detected on the entry that follows the gap (`mnemoscope-verify` reports `chain break: prevHash=… but expected …`).
+- **Truncation of the journal head is detected on the next `record()`** because the chain re-anchors on the file's tail. Truncation of trailing entries is detected by anyone who has previously seen a later entry's signature (e.g. via OpenTimestamps anchoring — see [docs/timestamping.md](./timestamping.md)).
