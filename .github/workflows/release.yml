@@ -16,13 +16,14 @@ jobs:
       REF_NAME: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v6
+      # Node 24 bundles npm >= 11.5.1, which is the minimum for OIDC trusted
+      # publishing. Avoids the `npm install -g npm@latest` upgrade-in-place
+      # path that hits MODULE_NOT_FOUND on the GitHub-hosted toolcache.
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org/
           cache: npm
-      # npm OIDC trusted publishing requires npm >= 11.5.1; Node 22 ships with 10.x.
-      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run build
       - run: npm run typecheck
