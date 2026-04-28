@@ -246,6 +246,8 @@ Pending proofs are upgraded to fully self-verifying Bitcoin proofs with the upst
 | ✅ | Obsidian plugin: sidebar view with SVG rot gauge, factor bars, top-risk list, settings tab, auto-onboarding modal on first launch | 28 KB single-file bundle, no runtime deps |
 | ✅ | Research sub-project: classifier (sklearn → ONNX), MarkdownMemBench v0.1 schema + sample dataset + harness, Chroma replication protocol with position-of-needle sweep | self-contained `uv` Python project under [`research/`](./research); CI runs `ruff` + 14 pytest cases on every push |
 | ✅ | CI green on Node 22 + Python 3.11, **0 npm vulnerabilities**, `npm audit --audit-level=moderate` enforced on every push | GitHub Actions on every push and PR |
+| ✅ | Three npm packages (`@mnemoscope/{core,mcp-server,cli}`) live on the public npm registry, published via [OIDC Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) (no rotating token, automatic provenance) | `npm view @mnemoscope/core` etc.; release workflow at `.github/workflows/release.yml` |
+| ✅ | The MCP server is listed on the [Official MCP Registry](https://registry.modelcontextprotocol.io/) under `io.github.toonight/mnemoscope` — automatic fan-out to PulseMCP and other downstream catalogs | [`server.json`](./server.json) at repo root, registered via `mcp-publisher` CLI |
 
 ## 🏗️ Architecture
 
@@ -335,14 +337,20 @@ Each thread lives in [`research/`](./research) and will produce a preprint along
 
 ## 🛣️ Roadmap
 
+### Done
+
+- [x] **Publish the three packages on npm** with [OIDC Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) — `@mnemoscope/{core,mcp-server,cli}` are live on the npm registry. CI publishes automatically on tag push, no rotating token required.
+- [x] **List the MCP server on the [Official MCP Registry](https://registry.modelcontextprotocol.io/)** — `io.github.toonight/mnemoscope @ 0.1.1` is indexed. PulseMCP ingests the official registry daily, so the server appears there too within ~7 days, no separate submission required.
+- [x] **Submit the Obsidian plugin to the community plugins directory** — [obsidianmd/obsidian-releases#12354](https://github.com/obsidianmd/obsidian-releases/pull/12354) passes automated validation; awaiting human review (typical 2–4 weeks).
+- [x] **Periodic remote attestation** — covered by the OpenTimestamps anchoring shipped in `[Unreleased]` (each journal entry's signature can be POSTed to a public OTS calendar and upgraded to a Bitcoin-backed proof, see [docs/timestamping.md](./docs/timestamping.md)).
+
+### Next
+
 - [ ] Dogfood the auto-journal hook on the author's vault for two full weeks; tune heuristics against observed Claude Code session outcomes
-- [ ] Submit the MCP server to [Smithery](https://smithery.ai), [PulseMCP](https://www.pulsemcp.com), [Glama](https://glama.ai) — registry metadata files (`smithery.yaml`, `glama.json`) already in this repo
-- [ ] Set the repo's `NPM_TOKEN` secret so that `git tag v0.1.0 && git push --tags` triggers the release workflow that publishes `@mnemoscope/{core,mcp-server,cli}` to npm with provenance
-- [ ] Submit the Obsidian plugin to community plugins
 - [ ] Replace the v0 heuristic rot score with the calibrated ONNX classifier (load via `onnxruntime-node` from `core` as an optional dependency)
 - [ ] Release **MarkdownMemBench v1** with 50–200 contributed real vaults
 - [ ] Preprint #1: replication of Chroma *Context Rot* on real Obsidian vaults
-- [ ] Periodic remote attestation (timestamping the journal head with an external notary, OTS-style)
+- [ ] List on [Glama](https://glama.ai/mcp) (catalog ingestion path complementary to PulseMCP)
 
 Full history: [CHANGELOG.md](./CHANGELOG.md).
 
