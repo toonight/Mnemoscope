@@ -82,6 +82,17 @@ def main() -> None:
         default=0.2,
         help="Fraction of the dataset used as held-out test set.",
     )
+    parser.add_argument(
+        "--collection-meta",
+        type=Path,
+        default=None,
+        help=(
+            "Optional path to the *-meta.json file emitted by collect_measurements.py. "
+            "Its contents are embedded under model.json#dataset_collection so the "
+            "data-collection cost (wall-clock, total LLM tokens, hardware notes) "
+            "is recorded alongside the trained model."
+        ),
+    )
     args = parser.parse_args()
 
     df = pd.read_csv(args.data)
@@ -124,7 +135,7 @@ def main() -> None:
 
     grader_models = sorted(df["model"].unique().tolist()) if "model" in df.columns else []
     offline_rows = int((df["offline"] == 1).sum()) if "offline" in df.columns else 0
-    metadata = {
+    metadata: dict[str, object] = {
         "features": FEATURES,
         "selected_model": winner_name,
         "metrics_per_family": results,
@@ -136,6 +147,24 @@ def main() -> None:
         "grader_models": grader_models,
         "offline_rows": offline_rows,
     }
+
+    # Cost transparency: when the collector produced a sibling *-meta.json
+    # describing the data-collection wall-clock + total LLM tokens, embed it
+    # under dataset_collection so reviewers can trace the full audit chain
+    # (raw cells -> measurements.csv -> trained model.onnx).
+    meta_path: Path | None = args.collection_meta
+    if meta_path is None:
+        # Auto-discovery: look for <data>-meta.json next to the CSV.
+        candidate = args.data.with_name(args.data.stem + "-meta.json")
+        if candidate.exists():
+            meta_path = candidate
+    if meta_path is not None and meta_path.exists():
+        try:
+            metadata["dataset_collection"] = json.loads(meta_path.read_text(encoding="utf-8"))
+            print(f"embedded dataset_collection metadata from {meta_path}")
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"warning: could not load --collection-meta {meta_path}: {e!r}")
+
     metadata_path = args.out.with_suffix(".json")
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     print(f"wrote {metadata_path}")

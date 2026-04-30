@@ -23,11 +23,53 @@
   },
   "rows_train": 40,
   "rows_test": 10,
-  "onnx_round_trip_max_delta": 1.5894571880892272e-08,
+  "onnx_round_trip_max_delta": 1.5894571991914574e-08,
   "data_source": "classifier/measurements.csv",
   "seed": 42,
   "grader_models": [
     "gemma4-ctx:latest"
   ],
-  "offline_rows": 0
+  "offline_rows": 0,
+  "dataset_collection": {
+    "_note": "Hand-recorded from the v0.2.0 collection run done on the author's laptop before the audit fields were added to collect_measurements.py. Future runs will populate this file automatically, with per-cell tokens + wall-clock aggregated by the collector. Fields with `null` are unknown for this specific run; everything else came from the PR description (#1) and the row count of measurements.csv.",
+    "model": "gemma4-ctx:latest",
+    "model_base": "gemma4:26b",
+    "model_quantization": "Q4_K_M",
+    "model_context_window": 40000,
+    "endpoint": "http://localhost:11434/v1",
+    "endpoint_kind": "ollama",
+    "offline": false,
+    "started_at": null,
+    "ended_at": null,
+    "wall_clock_s": null,
+    "wall_clock_s_grading_only": null,
+    "wall_clock_human": "multi-hour, single-machine local run",
+    "variants_attempted": 50,
+    "variants_kept": 50,
+    "variants_skipped_no_needles": 0,
+    "variants_failed": 0,
+    "total_cells": 400,
+    "total_tokens_input": null,
+    "total_tokens_output": null,
+    "tokens_estimate_method": "not recorded for this run; future runs aggregate prompt_tokens + completion_tokens from the OpenAI-compat usage block returned by the endpoint",
+    "training_cost": {
+      "wall_clock_s": "<1",
+      "llm_tokens_input": 0,
+      "llm_tokens_output": 0,
+      "note": "Training is sklearn ridge / random-forest / gradient-boosting on 40 rows; no LLM is involved at training time."
+    },
+    "config": {
+      "sizes": [
+        16000,
+        32000
+      ],
+      "positions": [
+        "middle"
+      ],
+      "needles_per_vault": 2,
+      "seed_base": 10000
+    },
+    "hardware_class": "consumer laptop, CPU/GPU details not recorded",
+    "reproducibility": "Re-running collect_measurements.py with the same seed_base, the same model, and the same sizes will produce a fresh measurements.csv whose features match this one bit-for-bit (the variant generator is deterministic). The observed_loss column is model-dependent and will differ if the grader changes."
+  }
 }

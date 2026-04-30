@@ -47,6 +47,11 @@ class Cell:
     correct: bool
     elapsed_ms: int
     notes: str | None = None
+    # Token usage as reported by the LLM endpoint (OpenAI-compatible
+    # `usage.{prompt_tokens, completion_tokens}`). None for offline cells
+    # or when the endpoint omits usage from its response.
+    tokens_in: int | None = None
+    tokens_out: int | None = None
 
 
 def grade_offline(haystack: str, needle: Needle) -> bool:
@@ -57,11 +62,13 @@ def grade_offline(haystack: str, needle: Needle) -> bool:
     return needle.answer() in haystack
 
 
-def grade_with_llm(haystack: str, needle: Needle, model: str) -> tuple[bool, str]:
+def grade_with_llm(
+    haystack: str, needle: Needle, model: str
+) -> tuple[bool, str, int | None, int | None]:
     api_key = os.environ.get("MMB_LLM_API_KEY")
     endpoint = os.environ.get("MMB_LLM_ENDPOINT", "https://api.openai.com/v1")
     if not api_key:
-        return False, "no MMB_LLM_API_KEY; offline path used"
+        return False, "no MMB_LLM_API_KEY; offline path used", None, None
     body = json.dumps({
         "model": model,
         "messages": [
@@ -86,11 +93,14 @@ def grade_with_llm(haystack: str, needle: Needle, model: str) -> tuple[bool, str
             last_err = e
             continue
     else:
-        return False, f"llm-error: {last_err!r}"
+        return False, f"llm-error: {last_err!r}", None, None
     answer = out["choices"][0]["message"]["content"].strip().lower()
     expected = needle.answer().lower()
     correct = expected[:60].split(".")[0].strip() in answer
-    return correct, answer
+    usage = out.get("usage") or {}
+    tokens_in = usage.get("prompt_tokens")
+    tokens_out = usage.get("completion_tokens")
+    return correct, answer, tokens_in, tokens_out
 
 
 def run_cell(
@@ -106,11 +116,13 @@ def run_cell(
     pair = build_pair(vault_root, needle, target_tokens=target_tokens, position=position)
     haystack = pair.structured if structuring == "structured" else pair.shuffled
     started = time.monotonic()
+    tokens_in: int | None = None
+    tokens_out: int | None = None
     if offline:
         correct = grade_offline(haystack, needle)
         notes = "offline grading (substring containment)"
     else:
-        correct, notes = grade_with_llm(haystack, needle, model)
+        correct, notes, tokens_in, tokens_out = grade_with_llm(haystack, needle, model)
     elapsed_ms = int((time.monotonic() - started) * 1000)
     return Cell(
         vault=str(vault_root.name),
@@ -122,6 +134,8 @@ def run_cell(
         correct=correct,
         elapsed_ms=elapsed_ms,
         notes=notes,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
     )
 
 

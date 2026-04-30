@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import math
 import os
 import random
@@ -339,6 +340,17 @@ def _build_variant(spec: VariantSpec, out_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class VariantOutcome:
+    factors: dict[str, float]
+    observed_loss: float
+    n_cells: int
+    n_correct: int
+    wall_clock_ms: int
+    tokens_in: int  # 0 means "endpoint did not report usage" (or offline)
+    tokens_out: int
+
+
 def _measure_variant(
     spec: VariantSpec,
     *,
@@ -348,8 +360,8 @@ def _measure_variant(
     positions: tuple[str, ...],
     needles_per_vault: int,
     offline: bool,
-) -> tuple[dict[str, float], float, int, int] | None:
-    """Build the variant, run the cells, return (factors, observed_loss, n_cells, n_correct).
+) -> VariantOutcome | None:
+    """Build the variant, run the cells, return aggregates per variant.
 
     Returns None when the variant has zero extractable needles (which can
     happen for very small / very stale corpora) -- that variant is skipped.
@@ -368,6 +380,9 @@ def _measure_variant(
 
     cells_correct = 0
     cells_total = 0
+    elapsed_ms_total = 0
+    tokens_in_total = 0
+    tokens_out_total = 0
     for size in sizes:
         for needle in needles:
             for structuring in ("structured", "shuffled"):
@@ -384,11 +399,24 @@ def _measure_variant(
                     cells_total += 1
                     if cell.correct:
                         cells_correct += 1
+                    elapsed_ms_total += cell.elapsed_ms
+                    if cell.tokens_in is not None:
+                        tokens_in_total += cell.tokens_in
+                    if cell.tokens_out is not None:
+                        tokens_out_total += cell.tokens_out
 
     if cells_total == 0:
         return None
     accuracy = cells_correct / cells_total
-    return factors, 1.0 - accuracy, cells_total, cells_correct
+    return VariantOutcome(
+        factors=factors,
+        observed_loss=1.0 - accuracy,
+        n_cells=cells_total,
+        n_correct=cells_correct,
+        wall_clock_ms=elapsed_ms_total,
+        tokens_in=tokens_in_total,
+        tokens_out=tokens_out_total,
+    )
 
 
 def main() -> None:
@@ -480,6 +508,9 @@ def main() -> None:
         "model",
         "offline",
         "seed",
+        "wall_clock_ms",
+        "tokens_in",
+        "tokens_out",
     ]
     rows: list[dict[str, float | int]] = []
     csv_fh = None
@@ -489,6 +520,16 @@ def main() -> None:
         csv_writer = csv.DictWriter(csv_fh, fieldnames=field_order)
         csv_writer.writeheader()
         csv_fh.flush()
+
+    # Grand totals across the whole collection — surfaced in collection-meta.json.
+    grand_total_wall_clock_ms = 0
+    grand_total_tokens_in = 0
+    grand_total_tokens_out = 0
+    grand_total_cells = 0
+    variants_kept = 0
+    variants_skipped_no_needles = 0
+    variants_failed = 0
+    collection_started = time.time()
     try:
         for i, spec in enumerate(specs, start=1):
             print(f"  [{i}/{args.variants}] seed={spec.seed} n_notes={spec.n_notes} "
@@ -504,7 +545,7 @@ def main() -> None:
                 print(f"      sig: {factors}")
                 continue
             try:
-                res = _measure_variant(
+                outcome = _measure_variant(
                     spec,
                     workdir=workdir,
                     model=args.model,
@@ -515,21 +556,35 @@ def main() -> None:
                 )
             except Exception as e:
                 print(f"      variant failed: {e!r}")
+                variants_failed += 1
                 continue
-            if res is None:
+            if outcome is None:
                 print("      skipped: no extractable needles")
+                variants_skipped_no_needles += 1
                 continue
-            factors, loss, n_cells, n_correct = res
-            print(f"      loss={loss:.3f} ({n_correct}/{n_cells} correct)")
+            print(
+                f"      loss={outcome.observed_loss:.3f} "
+                f"({outcome.n_correct}/{outcome.n_cells} correct, "
+                f"{outcome.wall_clock_ms / 1000:.1f}s, "
+                f"tokens_in={outcome.tokens_in})"
+            )
             row = {
-                **factors,
-                "observed_loss": loss,
-                "n_cells": n_cells,
+                **outcome.factors,
+                "observed_loss": outcome.observed_loss,
+                "n_cells": outcome.n_cells,
                 "model": args.model,
                 "offline": int(offline),
                 "seed": spec.seed,
+                "wall_clock_ms": outcome.wall_clock_ms,
+                "tokens_in": outcome.tokens_in,
+                "tokens_out": outcome.tokens_out,
             }
             rows.append(row)
+            grand_total_wall_clock_ms += outcome.wall_clock_ms
+            grand_total_tokens_in += outcome.tokens_in
+            grand_total_tokens_out += outcome.tokens_out
+            grand_total_cells += outcome.n_cells
+            variants_kept += 1
             if csv_writer is not None and csv_fh is not None:
                 csv_writer.writerow(row)
                 csv_fh.flush()
@@ -546,7 +601,44 @@ def main() -> None:
     if not rows:
         raise SystemExit("collected zero rows -- every variant skipped. Check your config.")
 
+    # Sibling collection-meta.json -- the audit trail train.py picks up via
+    # --collection-meta to embed under model.json#dataset_collection.
+    meta = {
+        "model": args.model,
+        "endpoint": os.environ.get("MMB_LLM_ENDPOINT", "https://api.openai.com/v1"),
+        "offline": offline,
+        "started_at": collection_started,
+        "ended_at": time.time(),
+        "wall_clock_s": round(time.time() - collection_started, 1),
+        "wall_clock_s_grading_only": round(grand_total_wall_clock_ms / 1000, 1),
+        "variants_attempted": len(specs),
+        "variants_kept": variants_kept,
+        "variants_skipped_no_needles": variants_skipped_no_needles,
+        "variants_failed": variants_failed,
+        "total_cells": grand_total_cells,
+        "total_tokens_input": grand_total_tokens_in,
+        "total_tokens_output": grand_total_tokens_out,
+        "config": {
+            "sizes": list(sizes),
+            "positions": list(positions),
+            "needles_per_vault": args.needles_per_vault,
+            "seed_base": args.seed_base,
+        },
+    }
+    meta_path = args.out.with_name(args.out.stem + "-meta.json")
+    meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
     print(f"\nwrote {args.out}  rows={len(rows)}  offline={offline}")
+    print(f"wrote {meta_path}")
+    print(
+        f"  wall-clock total: {meta['wall_clock_s']:.1f}s "
+        f"(grading only: {meta['wall_clock_s_grading_only']:.1f}s)"
+    )
+    print(f"  cells executed:   {grand_total_cells}")
+    print(
+        f"  LLM tokens:       in={grand_total_tokens_in} "
+        f"out={grand_total_tokens_out}"
+    )
     if offline:
         print(
             "WARNING: rows were graded by the offline substring grader. "

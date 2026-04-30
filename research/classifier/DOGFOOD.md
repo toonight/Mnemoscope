@@ -123,12 +123,31 @@ signatures span the 5-factor space before committing to a paid run.
 - **Never train on offline rows.** The runner falls back to a substring
   grader when `MMB_LLM_API_KEY` is unset. Those rows are tagged
   `offline=1` in the CSV; `train.py` knows to refuse them.
-- **Always commit the resulting `measurements.csv`** alongside the
-  retrained `model.onnx` and `model.json`. Reproducibility costs nothing
-  and lets reviewers replay the comparison.
+- **Always commit the resulting `measurements.csv` *and* the sibling
+  `measurements-meta.json`** alongside the retrained `model.onnx` and
+  `model.json`. The `*-meta.json` records wall-clock, total LLM tokens
+  in / out, and per-config knobs — `train.py` auto-discovers it next to
+  the CSV and embeds it under `model.json#dataset_collection` so any
+  reviewer can trace the full audit chain (raw cells → measurements →
+  trained model).
 - **Pin the model name** in `--model`. Don't conflate gpt-4o and
   gpt-4o-mini in one CSV; if you really want both, run two separate
   collections and let `train.py` learn from the union.
+
+## Audit trail per run
+
+`collect_measurements.py` writes two artifacts per run:
+
+| File | What's in it |
+|---|---|
+| `<out>.csv` | one row per kept variant, with the 5-factor signature, `observed_loss`, `n_cells`, `model`, `offline` flag, `seed`, **`wall_clock_ms`** and **`tokens_in` / `tokens_out`** as reported by the endpoint's `usage` block |
+| `<out>-meta.json` | grand totals across the run: `wall_clock_s`, `wall_clock_s_grading_only`, `total_cells`, `total_tokens_input`, `total_tokens_output`, plus the model / endpoint / config used |
+
+`train.py --collection-meta <path>` (or auto-discovery on the matching
+filename) embeds that JSON under `model.json#dataset_collection`. So
+every published model carries the full cost story — wall-clock, total
+tokens, hardware notes, training cost (effectively zero — sklearn on
+~50 rows) — without anyone having to reconstruct it from terminal logs.
 
 ## What good looks like
 
