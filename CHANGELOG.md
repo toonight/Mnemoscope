@@ -4,6 +4,19 @@ All notable changes to Mnemoscope are documented here. The project follows [Keep
 
 ## [Unreleased]
 
+### Added
+
+- **Predictive context-rot classifier — first calibration on real LLM measurements.** Replaces the 1 000-row synthetic training set with a 50-row `research/classifier/measurements.csv` produced by running `collect_measurements.py` against `gemma4:26b` (Q4_K_M, `num_ctx=40000`) locally via Ollama. Each variant graded across 8 cells (sizes 16K / 32K × structured / shuffled × 2 needles). Random Forest wins on real data — R² = 0.5827, MAE = 0.1386 on a 10-row held-out split — while Ridge collapses from 0.85 on the synthetic baseline to 0.14 here, confirming the rot surface has interactions a linear model cannot capture. **First public observation of Chroma 2025's "structured > shuffled is worse" effect on real Markdown vaults graded by a real LLM**: `structural_coherence` correlates r = +0.30 with observed loss across the 50 rows. `model.json` now records `grader_models` and `offline_rows` so every published model is auditable. ONNX round-trip max delta 1.6e-8.
+
+### Changed
+
+- **Classifier status moved from 🟡 to 🟢** in the README's *Scientific posture* table — the calibrated row is the public claim, not the synthetic baseline anymore.
+
+### Fixed
+
+- `research/replication/run.py` — `grade_with_llm` now retries once on timeout, with a configurable `MMB_LLM_TIMEOUT_S` env var. Multi-hour collection runs are no longer single-cell-fragile.
+- `research/classifier/collect_measurements.py` — flushes `measurements.csv` after every variant and wraps each variant's grading loop in `try/except`, so a single timed-out cell mid-run doesn't lose all the prior progress.
+
 ## [0.2.0] — 2026-04-28
 
 Coordinated release that consolidates everything shipped between 0.1.0 and today: predictive context-rot tooling polish, the full distribution push (npm OIDC, MCP Registry, Obsidian community-plugin submission), and the lint/test/CI hardening that came out of the Obsidian review cycle.
