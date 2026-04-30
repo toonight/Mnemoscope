@@ -126,7 +126,7 @@ Imagine you start a brand-new project — a folder of Markdown notes you'll grow
   ],
   "vault_stats": { "noteCount": 113, "approxTokens": 506823 },
   "baseline_model": "v0-heuristic",
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
 ```
 
@@ -230,12 +230,12 @@ mnemoscope-timestamp /path/to/vault
 
 Pending proofs are upgraded to fully self-verifying Bitcoin proofs with the upstream `ots upgrade` / `ots verify` CLIs — that part is intentionally not reimplemented. Full threat model and flow: [docs/timestamping.md](./docs/timestamping.md).
 
-## ✅ What works today (v0.1.0)
+## ✅ What works today
 
 | | What | How verified |
 |---|---|---|
-| ✅ | `predict_rot` returns a 5-factor breakdown, each factor citation-backed in source | 12 unit tests; smoke-tested on a real 506 K-token vault — sensible top-risk ordering |
-| ✅ | `get_tiered_read` splits a vault into working / episodic / semantic by freshness | integration test on fixture vault; freshness-based v0, access-frequency planned for v0.2 |
+| ✅ | `predict_rot` returns a 5-factor breakdown, each factor citation-backed in source | 14 unit tests; smoke-tested on a real 506 K-token vault — sensible top-risk ordering |
+| ✅ | `get_tiered_read` splits a vault into working / episodic / semantic by freshness | integration test on fixture vault; freshness-based, access-frequency aware in a future revision |
 | ✅ | `record_journal` produces a real **Ed25519** signature with **prevHash** chaining | 9 journal tests, including 4 tamper tests + 2 chain-integrity tests (truncation, reordering) |
 | ✅ | `mnemoscope-init` bootstraps a vault idempotently | manual run on multiple fresh + existing vaults |
 | ✅ | `mnemoscope-verify` CLI replays and exits non-zero on any invalid entry | wired to the same `verifyAll` |
@@ -243,11 +243,11 @@ Pending proofs are upgraded to fully self-verifying Bitcoin proofs with the upst
 | ✅ | `mnemoscope-backup-key` / `mnemoscope-restore-key` encrypt the per-vault Ed25519 key with scrypt + AES-256-GCM | 7 unit tests, full flow in [docs/key-escrow.md](./docs/key-escrow.md) |
 | ✅ | `mnemoscope-timestamp` anchors each entry's signature to a Bitcoin-backed OpenTimestamps calendar; pending `.ots` proofs upgraded with the official `ots` CLI | 12 unit tests + smoke-tested 3 entries → 3 `.ots` files round-trip through `verifyOtsHeaderForDigest`; full flow in [docs/timestamping.md](./docs/timestamping.md) |
 | ✅ | MCP server passes 5 end-to-end tests over real JSON-RPC stdio | `server.test.ts` spawns the binary |
-| ✅ | Obsidian plugin: sidebar view with SVG rot gauge, factor bars, top-risk list, settings tab, auto-onboarding modal on first launch | 28 KB single-file bundle, no runtime deps |
-| ✅ | Research sub-project: classifier (sklearn → ONNX), MarkdownMemBench v0.1 schema + sample dataset + harness, Chroma replication protocol with position-of-needle sweep | self-contained `uv` Python project under [`research/`](./research); CI runs `ruff` + 14 pytest cases on every push |
-| ✅ | CI green on Node 22 + Python 3.11, **0 npm vulnerabilities**, `npm audit --audit-level=moderate` enforced on every push | GitHub Actions on every push and PR |
-| ✅ | Three npm packages (`@mnemoscope/{core,mcp-server,cli}`) live on the public npm registry, published via [OIDC Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) (no rotating token, automatic provenance) | `npm view @mnemoscope/core` etc.; release workflow at `.github/workflows/release.yml` |
-| ✅ | The MCP server is listed on the [Official MCP Registry](https://registry.modelcontextprotocol.io/) under `io.github.toonight/mnemoscope` — automatic fan-out to PulseMCP and other downstream catalogs | [`server.json`](./server.json) at repo root, registered via `mcp-publisher` CLI |
+| ✅ | Obsidian plugin: sidebar view with SVG rot gauge, factor bars, top-risk list, settings tab, auto-onboarding modal on first launch | single-file bundle, no runtime deps; `eslint-plugin-obsidianmd` clean in CI |
+| ✅ | Research sub-project: predictive classifier **calibrated on real LLM measurements** (Random Forest R² = 0.58 on 50 rows graded by Gemma 4 26B), MarkdownMemBench v0.1 schema + sample dataset + harness, Chroma replication protocol with position-of-needle sweep | self-contained Python project under [`research/`](./research); CI runs `ruff` + 14 pytest cases on every push; classifier metadata audited in [`research/classifier/model.json`](./research/classifier/model.json) |
+| ✅ | CI green on Node 22 + Python 3.11, **0 npm vulnerabilities**, `npm audit --audit-level=moderate` and `eslint-plugin-obsidianmd` enforced on every push | GitHub Actions on every push and PR |
+| ✅ | Three npm packages (`@mnemoscope/{core,mcp-server,cli}@0.2.0`) live on the public npm registry, published via [OIDC Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) (no rotating token, automatic provenance) | `npm view @mnemoscope/core` etc.; release workflow at `.github/workflows/release.yml` |
+| ✅ | The MCP server is listed on the [Official MCP Registry](https://registry.modelcontextprotocol.io/) under `io.github.toonight/mnemoscope @ 0.2.0` — automatic fan-out to PulseMCP and other downstream catalogs | [`server.json`](./server.json) at repo root, registered via `mcp-publisher` CLI |
 
 ## 🏗️ Architecture
 
@@ -339,15 +339,17 @@ Each thread lives in [`research/`](./research) and will produce a preprint along
 
 ### Done
 
-- [x] **Publish the three packages on npm** with [OIDC Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) — `@mnemoscope/{core,mcp-server,cli}` are live on the npm registry. CI publishes automatically on tag push, no rotating token required.
-- [x] **List the MCP server on the [Official MCP Registry](https://registry.modelcontextprotocol.io/)** — `io.github.toonight/mnemoscope @ 0.1.1` is indexed. PulseMCP ingests the official registry daily, so the server appears there too within ~7 days, no separate submission required.
+- [x] **Publish the three packages on npm at v0.2.0** with [OIDC Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) — `@mnemoscope/{core,mcp-server,cli}` are live on the npm registry. CI publishes automatically on tag push, no rotating token required, provenance attestations emitted on every publish.
+- [x] **List the MCP server on the [Official MCP Registry](https://registry.modelcontextprotocol.io/)** — `io.github.toonight/mnemoscope @ 0.2.0` is indexed. PulseMCP ingests the official registry daily, so the server appears there too within ~7 days, no separate submission required.
 - [x] **Submit the Obsidian plugin to the community plugins directory** — [obsidianmd/obsidian-releases#12354](https://github.com/obsidianmd/obsidian-releases/pull/12354) passes automated validation; awaiting human review (typical 2–4 weeks).
-- [x] **Periodic remote attestation** — covered by the OpenTimestamps anchoring shipped in `[Unreleased]` (each journal entry's signature can be POSTed to a public OTS calendar and upgraded to a Bitcoin-backed proof, see [docs/timestamping.md](./docs/timestamping.md)).
+- [x] **Periodic remote attestation** — OpenTimestamps anchoring of every journal-entry signature, upgradable to a Bitcoin-backed proof via the upstream `ots` CLI ([docs/timestamping.md](./docs/timestamping.md)).
+- [x] **Calibrate the predictive classifier on real LLM measurements** — 50 `(signature, observed_loss)` rows graded by `gemma4:26b`, Random Forest wins at R² = 0.58 / MAE = 0.14 on the held-out split; first public observation of the Chroma 2025 "structured > shuffled is worse" effect on real Markdown vaults graded by a real LLM ([model.json](./research/classifier/model.json)).
+- [x] **Lint locally with the same plugin the Obsidian reviewer uses** — `eslint-plugin-obsidianmd` is wired into the project (root `eslint.config.mjs`, `npm run lint`) and gates CI, so reviewer-bot findings land at commit time instead of review time.
 
 ### Next
 
 - [ ] Dogfood the auto-journal hook on the author's vault for two full weeks; tune heuristics against observed Claude Code session outcomes
-- [ ] Replace the v0 heuristic rot score with the calibrated ONNX classifier (load via `onnxruntime-node` from `core` as an optional dependency)
+- [ ] Wire the calibrated `model.onnx` into `@mnemoscope/core` via `onnxruntime-node` (optional dependency) so `predict_rot` returns the model's prediction next to the v0 heuristic
 - [ ] Release **MarkdownMemBench v1** with 50–200 contributed real vaults
 - [ ] Preprint #1: replication of Chroma *Context Rot* on real Obsidian vaults
 - [ ] List on [Glama](https://glama.ai/mcp) (catalog ingestion path complementary to PulseMCP)
