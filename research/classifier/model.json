@@ -13,7 +13,7 @@
       "mae": 0.2305544912815094
     },
     "rf": {
-      "r2": 0.5827302810366342,
+      "r2": 0.5827302810366344,
       "mae": 0.13861422095128922
     },
     "gbr": {
@@ -24,7 +24,12 @@
   "rows_train": 40,
   "rows_test": 10,
   "onnx_round_trip_max_delta": 1.5894571880892272e-08,
-  "data_source": "classifier/measurements.csv",
+  "data_sources": [
+    "classifier/measurements.csv"
+  ],
+  "rows_per_source": {
+    "classifier/measurements.csv": 50
+  },
   "seed": 42,
   "grader_models": [
     "gemma4-ctx:latest"

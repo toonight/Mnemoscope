@@ -134,6 +134,56 @@ signatures span the 5-factor space before committing to a paid run.
   gpt-4o-mini in one CSV; if you really want both, run two separate
   collections and let `train.py` learn from the union.
 
+## Training on the union of multiple datasets
+
+`train.py` accepts multiple `--data` arguments. Rows are concatenated
+(and offline-graded ones dropped by default). Each source is recorded
+under `model.json#data_sources` and `rows_per_source` so it stays
+auditable which CSV contributed which slice. When more than one source
+has a sibling `*-meta.json`, the embedded `dataset_collection` becomes
+a dict keyed by CSV path; with a single source, it stays a flat object
+for backward-compatibility.
+
+```bash
+uv run python -m classifier.train \
+    --data classifier/measurements.csv \
+            classifier/measurements-gpt-4o-mini.csv \
+            classifier/measurements-claude-haiku.csv \
+    --out classifier/model.onnx \
+    --models ridge rf gbr
+```
+
+This is the path for **community contributions**: a contributor who
+runs `collect_measurements.py` on their own LLM endpoint produces
+`measurements-<model>.csv` plus its meta sidecar, opens a PR adding
+both files to `research/classifier/`, and the next `train.py` run
+unions them with the existing data.
+
+## Contributing measurements
+
+If you want to **extend the calibration set**:
+
+1. Fork [`toonight/Mnemoscope`](https://github.com/toonight/Mnemoscope).
+2. Run the collector with a model **different** from those already
+   represented in `model.json#grader_models`. Keep variants in the
+   50–200 range so the contribution is statistically meaningful but
+   not overwhelming.
+3. Name the output to disambiguate the source:
+   `classifier/measurements-<short-model-id>.csv` (and its
+   `-meta.json` sidecar).
+4. **Do not** retrain `model.onnx` in your PR — that's the
+   maintainers' job once the new data lands. Keep the diff to two
+   files (CSV + meta).
+5. PR title: `data(classifier): add <model-id> measurements (<N> rows)`.
+   In the body, include the per-feature correlation table from
+   `model.json` and a one-paragraph note on what the run cost
+   (wall-clock + tokens are already in your meta sidecar — quote them).
+
+The synthetic vaults the collector builds **never reference your
+own files**. The CSV row content is six numbers + the model name +
+seed + wall-clock + tokens. No vault content is exfiltrated by this
+workflow.
+
 ## Audit trail per run
 
 `collect_measurements.py` writes two artifacts per run:
