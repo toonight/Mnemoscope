@@ -75,8 +75,18 @@ def grade_with_llm(haystack: str, needle: Needle, model: str) -> tuple[bool, str
         data=body,
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        out = json.loads(resp.read().decode("utf-8"))
+    timeout_s = int(os.environ.get("MMB_LLM_TIMEOUT_S", "600"))
+    last_err: Exception | None = None
+    for _attempt in range(2):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+                out = json.loads(resp.read().decode("utf-8"))
+            break
+        except (TimeoutError, urllib.error.URLError) as e:
+            last_err = e
+            continue
+    else:
+        return False, f"llm-error: {last_err!r}"
     answer = out["choices"][0]["message"]["content"].strip().lower()
     expected = needle.answer().lower()
     correct = expected[:60].split(".")[0].strip() in answer

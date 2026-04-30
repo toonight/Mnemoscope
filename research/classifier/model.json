@@ -6,24 +6,28 @@
     "structural_coherence",
     "freshness_spread"
   ],
-  "selected_model": "ridge",
+  "selected_model": "rf",
   "metrics_per_family": {
     "ridge": {
-      "r2": 0.8515058159828186,
-      "mae": 0.04226146638393402
+      "r2": 0.14399254322052002,
+      "mae": 0.2305544912815094
     },
     "rf": {
-      "r2": 0.768818616820913,
-      "mae": 0.05184021839242574
+      "r2": 0.5827302810366342,
+      "mae": 0.13861422095128922
     },
     "gbr": {
-      "r2": 0.8041925196568156,
-      "mae": 0.04846685127182775
+      "r2": 0.11393034957953463,
+      "mae": 0.18180367962115912
     }
   },
-  "rows_train": 800,
-  "rows_test": 200,
-  "onnx_round_trip_max_delta": 1.1920928955078125e-07,
-  "data_source": "classifier/synthetic-large.csv",
-  "seed": 42
+  "rows_train": 40,
+  "rows_test": 10,
+  "onnx_round_trip_max_delta": 1.5894571880892272e-08,
+  "data_source": "classifier/measurements.csv",
+  "seed": 42,
+  "grader_models": [
+    "gemma4-ctx:latest"
+  ],
+  "offline_rows": 0
 }

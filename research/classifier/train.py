@@ -122,6 +122,8 @@ def main() -> None:
     delta = float(np.max(np.abs(onnx_pred - sklearn_pred)))
     print(f"onnx round-trip max delta vs sklearn: {delta:.6f}")
 
+    grader_models = sorted(df["model"].unique().tolist()) if "model" in df.columns else []
+    offline_rows = int((df["offline"] == 1).sum()) if "offline" in df.columns else 0
     metadata = {
         "features": FEATURES,
         "selected_model": winner_name,
@@ -131,6 +133,8 @@ def main() -> None:
         "onnx_round_trip_max_delta": delta,
         "data_source": str(args.data),
         "seed": args.seed,
+        "grader_models": grader_models,
+        "offline_rows": offline_rows,
     }
     metadata_path = args.out.with_suffix(".json")
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")

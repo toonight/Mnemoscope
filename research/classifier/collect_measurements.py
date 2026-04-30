@@ -469,7 +469,26 @@ def main() -> None:
         workdir = args.workdir
         workdir.mkdir(parents=True, exist_ok=True)
 
+    field_order = [
+        "token_volume",
+        "semantic_redundancy",
+        "distractor_density",
+        "structural_coherence",
+        "freshness_spread",
+        "observed_loss",
+        "n_cells",
+        "model",
+        "offline",
+        "seed",
+    ]
     rows: list[dict[str, float | int]] = []
+    csv_fh = None
+    csv_writer = None
+    if not args.dry_run:
+        csv_fh = args.out.open("w", encoding="utf-8", newline="")
+        csv_writer = csv.DictWriter(csv_fh, fieldnames=field_order)
+        csv_writer.writeheader()
+        csv_fh.flush()
     try:
         for i, spec in enumerate(specs, start=1):
             print(f"  [{i}/{args.variants}] seed={spec.seed} n_notes={spec.n_notes} "
@@ -484,29 +503,39 @@ def main() -> None:
                 factors = compute_factors(sig)
                 print(f"      sig: {factors}")
                 continue
-            res = _measure_variant(
-                spec,
-                workdir=workdir,
-                model=args.model,
-                sizes=sizes,
-                positions=positions,
-                needles_per_vault=args.needles_per_vault,
-                offline=offline,
-            )
+            try:
+                res = _measure_variant(
+                    spec,
+                    workdir=workdir,
+                    model=args.model,
+                    sizes=sizes,
+                    positions=positions,
+                    needles_per_vault=args.needles_per_vault,
+                    offline=offline,
+                )
+            except Exception as e:
+                print(f"      variant failed: {e!r}")
+                continue
             if res is None:
                 print("      skipped: no extractable needles")
                 continue
             factors, loss, n_cells, n_correct = res
             print(f"      loss={loss:.3f} ({n_correct}/{n_cells} correct)")
-            rows.append({
+            row = {
                 **factors,
                 "observed_loss": loss,
                 "n_cells": n_cells,
                 "model": args.model,
                 "offline": int(offline),
                 "seed": spec.seed,
-            })
+            }
+            rows.append(row)
+            if csv_writer is not None and csv_fh is not None:
+                csv_writer.writerow(row)
+                csv_fh.flush()
     finally:
+        if csv_fh is not None:
+            csv_fh.close()
         if workdir_ctx is not None:
             workdir_ctx.cleanup()
 
@@ -517,23 +546,6 @@ def main() -> None:
     if not rows:
         raise SystemExit("collected zero rows -- every variant skipped. Check your config.")
 
-    field_order = [
-        "token_volume",
-        "semantic_redundancy",
-        "distractor_density",
-        "structural_coherence",
-        "freshness_spread",
-        "observed_loss",
-        "n_cells",
-        "model",
-        "offline",
-        "seed",
-    ]
-    with args.out.open("w", encoding="utf-8", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=field_order)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow(row)
     print(f"\nwrote {args.out}  rows={len(rows)}  offline={offline}")
     if offline:
         print(
