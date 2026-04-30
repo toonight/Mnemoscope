@@ -77,7 +77,7 @@ def grade_with_llm(haystack: str, needle: Needle, model: str) -> tuple[bool, str
     )
     timeout_s = int(os.environ.get("MMB_LLM_TIMEOUT_S", "600"))
     last_err: Exception | None = None
-    for attempt in range(2):
+    for _attempt in range(2):
         try:
             with urllib.request.urlopen(req, timeout=timeout_s) as resp:
                 out = json.loads(resp.read().decode("utf-8"))
